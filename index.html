@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConectaVzla</title>
+    <meta name="description" content="ConectaVzla es una aplicación de mensajería instantánea moderna para comunicarte de forma rápida y segura.">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="chat-list-view" class="view active">
+    <header class="app-header">
+      <h1 class="app-title">
+        <img src="img/logo.webp" alt="Logo ConectaVzla" class="app-logo">
+        ConectaVzla
+      </h1>
+       <div class="header-actions">
+        <button id="btn-new-chat" title="Nuevo Chat" aria-label="Nuevo Chat">➕</button>
+       </div>
+    </header>
+            
+            <div class="search-bar">
+                <input type="text" id="search-contact" placeholder="Buscar contacto...">
+            </div>
+            <div class="chats-title-container">
+              <h2 class="chats-title">Chats</h2>
+            </div>
+
+            <div class="contacts-list" id="contacts-container">
+                <div class="contact-item" onclick="openChat('Ana García')">
+                 <img src="img/avatar.webp" alt="Avatar de Ana García" class="avatar">
+                    <div class="contact-info">
+                        <div class="contact-row">
+                            <span class="contact-name">Ana García</span>
+                            <span class="message-time">10:45 AM</span>
+                        </div>
+                        <div class="contact-row">
+                            <p class="last-message">🎤 Nota de voz (0:12)</p>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="chat-room-view" class="view">
+            <header class="chat-header">
+               <button id="btn-back" onclick="closeChat()" aria-label="Volver">⬅️</button>
+               <img src="img/avatar.webp" alt="Avatar" class="avatar"> 
+               <div class="active-user-info">
+                    <span id="active-name">Ana García</span>
+                    <span class="status-online">En línea</span>
+                </div>
+                <div class="chat-header-actions">
+                    <button title="Llamada de voz" id="btn-voice-call">📞</button>
+                    <button title="Videollamada" id="btn-video-call">📹</button>
+                </div>
+            </header>
+
+            <div class="messages-container" id="messages-container">
+            </div>
+
+            <footer class="chat-input-bar">
+                <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+                <button id="btn-voice" title="Mantener para grabar nota de voz">🎤</button>
+                <button id="btn-send" title="Enviar">➤</button>
+            </footer>
+        </div>
+
+        <div id="call-screen-view" class="view call-screen">
+            <div class="call-content">
+               <img src="img/avatar.webp" alt="Avatar de Ana García" class="avatar">
+                <h2 id="call-name">Ana García</h2>
+                <p id="call-status">Llamando...</p>
+            </div>
+            <div class="call-actions">
+                <button id="btn-end-call" class="btn-hangup" title="Colgar">FIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
