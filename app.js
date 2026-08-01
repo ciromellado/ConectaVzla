@@ -1,6 +1,12 @@
 // ==========================================
 // CHATVEN-LIGHT: LÓGICA DE INTERFAZ Y DATOS
 // ==========================================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const SUPABASE_URL = 'https://cwfhufcvnmvwpppfpcuy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3Zmh1ZmN2bm12d3BwcGZwY3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1Nzc1MDUsImV4cCI6MjEwMTE1MzUwNX0.rSCUty5TPlBz8mIo6x5xp-xigpxraCt6kfLAjwowP0I';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const MAX_MESSAGES = 20; // Límite actualizado a 20 mensajes
 
