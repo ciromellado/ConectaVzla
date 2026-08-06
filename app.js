@@ -1,7 +1,9 @@
 // ==========================================
 // CONECTAVZLA: LÓGICA DE INTERFAZ Y MULTIMEDIA
 // ==========================================
-
+const SUPABASE_URL = 'https://cwfhufcvnmvwpppfpcuy.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_EDdIOkno_hakOWXApO2hVQ_iZ_r4UnP';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const MAX_MESSAGES = 10; // Límite estricto de 10 mensajes activos
 
 // Elementos del DOM (Vistas principales)
