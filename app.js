@@ -3,8 +3,15 @@
 // ==========================================
 const SUPABASE_URL = 'https://cwfhufcvnmvwpppfpcuy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_EDdIOkno_hakOWXApO2hVQ_iZ_r4UnP';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const MAX_MESSAGES = 10; // Límite estricto de 10 mensajes activos
+
+let supabaseClient;
+try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (e) {
+    console.log("Error inicializando Supabase:", e);
+}
+
+const MAX_MESSAGES = 10; // Límite estricto de mensajes activos
 
 // Elementos del DOM (Vistas principales)
 const loginView = document.getElementById('login-view');
@@ -26,24 +33,10 @@ const usernameInput = document.getElementById('username-input');
 // ESTADO DE LA APLICACIÓN
 let currentContact = null;
 let currentUser = null;
-let nextId = 1;
 
-// Historiales independientes indexados por nombre de contacto (ConectVzla por defecto)
-let chatHistories = {
-    "ConectVzla": [
-        { id: nextId++, text: "Bienvenido a ConectVzla", sender: "received", time: "00:00 AM" },
-        { id: nextId++, text: "Gracias", sender: "sent", time: "00:01 AM" }
-    ]
-};
-
-let contactsList = [
-    { 
-        name: "ConectVzla", 
-        lastMessage: "Gracias", 
-        time: "00:01 AM",
-        avatar: "img/avatar.webp"
-    }
-];
+// Historiales independientes indexados por nombre de contacto
+let chatHistories = {};
+let contactsList = [];
 
 // Variables para control de grabación multimedia
 let mediaRecorder;
@@ -53,7 +46,6 @@ let mediaChunks = [];
 // FUNCIONES DE SEGURIDAD Y RENDERIZADO
 // ==========================================
 
-// Previene ataques XSS escapando caracteres HTML maliciosos
 function escapeHTML(str) {
     const div = document.createElement('div');
     div.textContent = str;
@@ -78,10 +70,10 @@ function renderContacts() {
             <div class="contact-info">
                 <div class="contact-row">
                     <span class="contact-name">${escapeHTML(contact.name)}</span>
-                    <span class="message-time">${escapeHTML(contact.time)}</span>
+                    <span class="message-time">${escapeHTML(contact.time || '')}</span>
                 </div>
                 <div class="contact-row">
-                    <p class="last-message">${escapeHTML(contact.lastMessage)}</p>
+                    <p class="last-message">${escapeHTML(contact.lastMessage || '')}</p>
                 </div>
             </div>
             <button class="btn-delete-contact" data-action="delete" title="Borrar chat y contacto">🗑️</button>
@@ -99,11 +91,9 @@ function renderMessages() {
     messagesToDisplay.forEach(msg => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', msg.sender);
-        messageDiv.dataset.msgId = msg.id;
+        if (msg.id) messageDiv.dataset.msgId = msg.id;
         
         const firmaEmisor = msg.senderName ? escapeHTML(msg.senderName) : (msg.sender === 'sent' ? 'Tú' : currentContact);
-
-        // Si el mensaje contiene HTML seguro (como reproductores de audio/video), se renderiza directamente
         const cuerpoMensaje = msg.isHtml ? msg.text : `<p>${escapeHTML(msg.text)}</p>`;
 
         messageDiv.innerHTML = `
@@ -112,7 +102,7 @@ function renderMessages() {
             </div>
             ${cuerpoMensaje}
             <div class="msg-footer">
-                <span class="msg-time">${escapeHTML(msg.time)}</span>
+                <span class="msg-time">${escapeHTML(msg.time || '')}</span>
                 <button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button>
             </div>
         `;
@@ -123,7 +113,7 @@ function renderMessages() {
 }
 
 // ==========================================
-// LÓGICA DE USUARIO Y SESIÓN
+// LÓGICA DE USUARIO Y SESIÓN (SUPABASE)
 // ==========================================
 
 function inicializarUsuarioActual(nombre) {
@@ -131,7 +121,7 @@ function inicializarUsuarioActual(nombre) {
     localStorage.setItem("usuarioActual", currentUser);
 }
 
-function registrarUsuario() {
+async function registrarUsuario() {
     const nombreUsuario = usernameInput.value.trim();
 
     if (nombreUsuario === "") {
@@ -139,19 +129,57 @@ function registrarUsuario() {
         return;
     }
 
+    // Guardar o verificar usuario en Supabase opcionalmente
+    if (supabaseClient) {
+        await supabaseClient
+            .from('usuarios')
+            .upsert({ nombre: nombreUsuario }, { onConflict: 'nombre' });
+    }
+
     inicializarUsuarioActual(nombreUsuario);
 
     loginView.classList.remove('active');
     chatListView.classList.add('active');
 
-    renderContacts();
+    await cargarContactosDesdeSupabase();
+}
+
+async function cargarContactosDesdeSupabase() {
+    if (!supabaseClient) return;
+
+    try {
+        // Consultar usuarios registrados en la nube
+        const { data, error } = await supabaseClient
+            .from('usuarios')
+            .select('*');
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            contactsList = data.map(u => ({
+                name: u.nombre,
+                lastMessage: u.nombre === currentUser ? "Tus notas o chat" : "¡Hola!",
+                time: "",
+                avatar: "img/avatar.webp"
+            })).filter(c => c.name !== currentUser); // Filtrar para no mostrarse a sí mismo como contacto principal si se desea
+        }
+
+        // Asegurar un contacto por defecto si la lista está vacía
+        if (contactsList.length === 0) {
+            contactsList = [{ name: "ConectVzla", lastMessage: "Bienvenido", time: "", avatar: "img/avatar.webp" }];
+        }
+
+        renderContacts();
+    } catch (err) {
+        console.error("Error al cargar contactos de Supabase:", err);
+    }
 }
 
 // ==========================================
-// LÓGICA DE NEGOCIO Y MENSAJERÍA
+// LÓGICA DE NEGOCIO Y MENSAJERÍA (SUPABASE)
 // ==========================================
 
-function openChat(contactName) {
+async function openChat(contactName) {
     currentContact = contactName;
     activeName.textContent = contactName;
     
@@ -161,7 +189,37 @@ function openChat(contactName) {
 
     chatListView.classList.remove('active');
     chatRoomView.classList.add('active');
+
+    // Cargar mensajes desde Supabase para este chat
+    await cargarMensajesDesdeSupabase(contactName);
     renderMessages();
+}
+
+async function cargarMensajesDesdeSupabase(contacto) {
+    if (!supabaseClient) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('mensajes')
+            .select('*')
+            .or(`emisor.eq.${currentUser},receptor.eq.${currentUser}`)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        if (data) {
+            chatHistories[contacto] = data.map(m => ({
+                id: m.id,
+                text: m.texto,
+                isHtml: m.is_html,
+                sender: m.emisor === currentUser ? "sent" : "received",
+                senderName: m.emisor,
+                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+        }
+    } catch (err) {
+        console.error("Error cargando mensajes:", err);
+    }
 }
 
 function closeChat() {
@@ -172,27 +230,48 @@ function closeChat() {
 
 function deleteMessage(msgId) {
     if (!currentContact) return;
-    
     chatHistories[currentContact] = chatHistories[currentContact].filter(msg => msg.id !== msgId);
     renderMessages();
 }
 
-function sendMessage() {
+async function sendMessage() {
     const text = messageInput.value.trim();
     if (text === '' || !currentContact) return;
 
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    // Guardar en Supabase
+    if (supabaseClient) {
+        const { error } = await supabaseClient
+            .from('mensajes')
+            .insert([
+                {
+                    emisor: currentUser,
+                    receptor: currentContact,
+                    texto: text,
+                    is_html: false
+                }
+            ]);
+
+        if (error) {
+            alert("Error al enviar el mensaje a la nube.");
+            console.error(error);
+            return;
+        }
+    }
+
     const newMessage = {
-        id: nextId++,
         text: text,
         isHtml: false,
         sender: "sent",
-        senderName: currentUser || "Tú",
+        senderName: currentUser,
         time: timeString
     };
 
+    if (!chatHistories[currentContact]) {
+        chatHistories[currentContact] = [];
+    }
     chatHistories[currentContact].push(newMessage);
 
     const contactIndex = contactsList.findIndex(c => c.name === currentContact);
@@ -209,10 +288,10 @@ function sendMessage() {
 }
 
 // ==========================================
-// GRABACIÓN DE NOTAS DE VOZ Y VIDEOMENSAJES
+// GRABACIÓN MULTIMEDIA
 // ==========================================
 
-function registrarElementoMultimedia(url, tipo) {
+async function registrarElementoMultimedia(url, tipo) {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -227,12 +306,24 @@ function registrarElementoMultimedia(url, tipo) {
         descripcionUltimoMensaje = "📹 Videomensaje";
     }
 
+    if (supabaseClient) {
+        await supabaseClient
+            .from('mensajes')
+            .insert([
+                {
+                    emisor: currentUser,
+                    receptor: currentContact,
+                    texto: contenidoHtml,
+                    is_html: true
+                }
+            ]);
+    }
+
     const newMessage = {
-        id: nextId++,
         text: contenidoHtml,
         isHtml: true,
         sender: "sent",
-        senderName: currentUser || "Tú",
+        senderName: currentUser,
         time: timeString
     };
 
@@ -241,23 +332,13 @@ function registrarElementoMultimedia(url, tipo) {
     }
 
     chatHistories[currentContact].push(newMessage);
-
-    const contactIndex = contactsList.findIndex(c => c.name === currentContact);
-    if (contactIndex !== -1) {
-        contactsList[contactIndex].lastMessage = descripcionUltimoMensaje;
-        contactsList[contactIndex].time = timeString;
-        const updatedContact = contactsList.splice(contactIndex, 1)[0];
-        contactsList.unshift(updatedContact);
-    }
-
     renderMessages();
     renderContacts();
 }
 
-// Evento Nota de Voz (Micrófono)
+// Listeners de Micrófono y Cámara
 document.getElementById('btn-voice').addEventListener('click', async () => {
     if (!currentContact) return;
-
     if (!mediaRecorder || mediaRecorder.state === "inactive") {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -273,7 +354,6 @@ document.getElementById('btn-voice').addEventListener('click', async () => {
 
             mediaRecorder.start();
             document.getElementById('btn-voice').style.backgroundColor = "#e53e3e";
-            alert("Grabando audio... Haz clic de nuevo en el micrófono para detener y enviar.");
         } catch (err) {
             alert("No se pudo acceder al micrófono.");
         }
@@ -284,10 +364,8 @@ document.getElementById('btn-voice').addEventListener('click', async () => {
     }
 });
 
-// Evento Videomensaje Corto (Cámara)
 document.getElementById('btn-video-msg').addEventListener('click', async () => {
     if (!currentContact) return;
-
     if (!mediaRecorder || mediaRecorder.state === "inactive") {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -303,7 +381,6 @@ document.getElementById('btn-video-msg').addEventListener('click', async () => {
 
             mediaRecorder.start();
             document.getElementById('btn-video-msg').style.backgroundColor = "#e53e3e";
-            alert("Grabando videomensaje... Haz clic de nuevo en la cámara para detener y enviar.");
         } catch (err) {
             alert("No se pudo acceder a la cámara o micrófono.");
         }
@@ -315,7 +392,7 @@ document.getElementById('btn-video-msg').addEventListener('click', async () => {
 });
 
 // ==========================================
-// GESTIÓN DE LLAMADAS Y SIMULACIONES
+// LLAMADAS Y EVENTOS GENERALES
 // ==========================================
 
 function startCall(type) {
@@ -335,10 +412,6 @@ function endCall() {
     callScreenView.classList.remove('active');
     callStatus.textContent = "Llamando...";
 }
-
-// ==========================================
-// DELEGACIÓN DE EVENTOS Y LISTENERS
-// ==========================================
 
 contactsContainer.addEventListener('click', (e) => {
     const deleteBtn = e.target.closest('[data-action="delete"]');
@@ -365,7 +438,7 @@ messagesContainer.addEventListener('click', (e) => {
     if (e.target.closest('[data-action="delete-msg"]')) {
         const messageDiv = e.target.closest('.message');
         const msgId = parseInt(messageDiv.dataset.msgId, 10);
-        deleteMessage(msgId);
+        if (msgId) deleteMessage(msgId);
     }
 });
 
@@ -385,7 +458,13 @@ if (usernameInput) {
     });
 }
 
-document.getElementById('btn-new-chat').addEventListener('click', function() {
+// Botón de login si existe explícitamente en el DOM
+const btnLogin = document.getElementById('btn-login');
+if (btnLogin) {
+    btnLogin.addEventListener('click', registrarUsuario);
+}
+
+document.getElementById('btn-new-chat').addEventListener('click', async function() {
     const newContactName = prompt("Ingresa el nombre del nuevo contacto:");
     
     if (newContactName && newContactName.trim() !== "") {
@@ -393,13 +472,10 @@ document.getElementById('btn-new-chat').addEventListener('click', function() {
         const exists = contactsList.some(c => c.name.toLowerCase() === nameFormatted.toLowerCase());
         
         if (!exists) {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
             contactsList.unshift({
                 name: nameFormatted,
                 lastMessage: "¡Nuevo chat iniciado!",
-                time: timeString,
+                time: "",
                 avatar: "img/avatar.webp"
             });
             chatHistories[nameFormatted] = [];
@@ -413,28 +489,17 @@ document.getElementById('btn-voice-call').addEventListener('click', () => startC
 document.getElementById('btn-video-call').addEventListener('click', () => startCall('video'));
 document.getElementById('btn-end-call').addEventListener('click', endCall);
 
-// Función para reproducir el sonido de notificación
-function reproducirSonidoNotificacion() {
-    const sonido = document.getElementById('notification-sound');
-    if (sonido) {
-        sonido.currentTime = 0; // Reinicia el audio por si llegan mensajes seguidos
-        sonido.play().catch(error => {
-            // Maneja la restricción del navegador si el usuario no ha interactuado aún
-            console.log("El navegador requiere interacción previa para reproducir audio.");
-        });
-    }
-}
 // ==========================================
-// INICIALIZACIÓN DE LA APLICACIÓN AL CARGAR
+// INICIALIZACIÓN AL CARGAR
 // ==========================================
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     const usuarioGuardado = localStorage.getItem("usuarioActual");
     
     if (usuarioGuardado) {
         inicializarUsuarioActual(usuarioGuardado);
         loginView.classList.remove('active');
         chatListView.classList.add('active');
-        renderContacts();
+        await cargarContactosDesdeSupabase();
     } else {
         loginView.classList.add('active');
         chatListView.classList.remove('active');
