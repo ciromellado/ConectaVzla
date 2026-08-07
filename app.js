@@ -2,21 +2,15 @@
 // CONECTAVZLA - INTEGRACIÓN CON SUPABASE
 // ==========================================
 
-// 🔑 CONFIGURACIÓN DE SUPABASE
 const SUPABASE_URL = 'https://uftrifkqbmxetluwupua.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdHJpZmtxYm14ZXRsdXd1cHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwODA5MDgsImV4cCI6MjEwMTY1NjkwOH0.P-xk8kidvZc69y2k77MOQd9ZdnJyKJq-t2AhK1pec8o';
 
-// Inicializar cliente Supabase
 const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ==========================================
-// CONSTANTES Y ESTADO GLOBAL
-// ==========================================
 const MAX_MESSAGES = 10;
 const MAX_IMAGES_PER_MESSAGE = 2;
 
-// Elementos del DOM
 const loginView = document.getElementById('login-view');
 const chatListView = document.getElementById('chat-list-view');
 const chatRoomView = document.getElementById('chat-room-view');
@@ -33,13 +27,9 @@ let currentUserId = null;
 let currentChatId = null;
 let messageSubscription = null;
 
-// Variables para grabación multimedia
 let mediaRecorder;
 let mediaChunks = [];
 
-// ==========================================
-// FUNCIONES AUXILIARES
-// ==========================================
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -53,52 +43,47 @@ function formatTime(timestamp) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ==========================================
-// AUTENTICACIÓN Y USUARIO
-// ==========================================
 async function registrarUsuario() {
     const nombreUsuario = usernameInput.value.trim();
     
-    if (nombreUsuario === "") {
-        alert("Por favor, ingresa un nombre válido.");
+    if (nombreUsuario === '') {
+        alert('Por favor, ingresa un nombre válido.');
         return;
     }
 
     try {
-        // Verificar si el usuario ya existe
-        const { data: existingUser, error: selectError } = await supabaseClient
+        const result = await supabaseClient
             .from('users')
             .select('id, username')
             .eq('username', nombreUsuario)
             .maybeSingle();
+
+        const existingUser = result.data;
+        const selectError = result.error;
 
         if (selectError && selectError.code !== 'PGRST116') {
             throw selectError;
         }
 
         if (existingUser) {
-            // Usuario ya existe
             currentUser = existingUser.username;
             currentUserId = existingUser.id;
         } else {
-            // Crear nuevo usuario
-            const { data: newUser, error: insertError } = await supabaseClient
+            const insertResult = await supabaseClient
                 .from('users')
                 .insert([{ username: nombreUsuario }])
                 .select()
                 .single();
 
-            if (insertError) throw insertError;
+            if (insertResult.error) throw insertResult.error;
             
-            currentUser = newUser.username;
-            currentUserId = newUser.id;
+            currentUser = insertResult.data.username;
+            currentUserId = insertResult.data.id;
         }
 
-        // Guardar en localStorage
         localStorage.setItem('usuarioActual', currentUser);
         localStorage.setItem('usuarioId', currentUserId);
 
-        // Cambiar vista
         loginView.classList.remove('active');
         chatListView.classList.add('active');
         
@@ -106,11 +91,6 @@ async function registrarUsuario() {
         
     } catch (error) {
         console.error('Error al registrar usuario:', error);
-        if (error.code === '23505') {
-            alert('Este nombre de usuario ya está en uso. Intenta con otro.');
-        } else {
-            alert('Error al registrar usuario: ' + error.message);
-        }
     }
 }
 
@@ -126,36 +106,27 @@ async function inicializarUsuarioActual() {
     return false;
 }
 
-// ==========================================
-// GESTIÓN DE CONTACTOS (CHATS)
-// ==========================================
 async function cargarContactos() {
     try {
-        const { data: chats, error } = await supabaseClient
+        const result = await supabaseClient
             .from('chats')
-            .select(`
-                *,
-                messages (
-                    content,
-                    message_type,
-                    created_at
-                )
-            `)
+            .select('*, messages(content, message_type, created_at)')
             .eq('user_id', currentUserId)
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (result.error) throw result.error;
 
-        const contactsList = chats.map(chat => {
-            // ✅ CORRECCIÓN: Ordenar mensajes por fecha descendente
+        const chats = result.data;
+        const contactsList = [];
+
+        chats.forEach(function(chat) {
             let lastMessage = '¡Nuevo chat iniciado!';
             let time = formatTime(chat.created_at);
             
             if (chat.messages && chat.messages.length > 0) {
-                // Ordenar mensajes del más nuevo al más antiguo
-                const sortedMessages = [...chat.messages].sort((a, b) => 
-                    new Date(b.created_at) - new Date(a.created_at)
-                );
+                const sortedMessages = chat.messages.slice().sort(function(a, b) {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
                 
                 const lastMsg = sortedMessages[0];
                 
@@ -171,13 +142,13 @@ async function cargarContactos() {
                 time = formatTime(lastMsg.created_at);
             }
 
-            return {
+            contactsList.push({
                 id: chat.id,
                 name: chat.contact_name,
                 lastMessage: lastMessage,
                 time: time,
                 avatar: chat.contact_avatar || 'img/avatar.webp'
-            };
+            });
         });
 
         renderContacts(contactsList);
@@ -190,40 +161,36 @@ async function cargarContactos() {
 function renderContacts(contactsList) {
     contactsContainer.innerHTML = '';
 
-    contactsList.forEach(contact => {
+    contactsList.forEach(function(contact) {
         const contactDiv = document.createElement('div');
         contactDiv.classList.add('contact-item');
         contactDiv.dataset.contactName = contact.name;
         contactDiv.dataset.chatId = contact.id;
 
-        contactDiv.innerHTML = `
-            <img src="${contact.avatar}" 
-                 alt="Avatar de ${escapeHTML(contact.name)}" 
-                 class="avatar" 
-                 onerror="this.src='img/avatar.webp'">
-            <div class="contact-info">
-                <div class="contact-row">
-                    <span class="contact-name">${escapeHTML(contact.name)}</span>
-                    <span class="message-time">${escapeHTML(contact.time)}</span>
-                </div>
-                <div class="contact-row">
-                    <p class="last-message">${escapeHTML(contact.lastMessage)}</p>
-                </div>
-            </div>
-            <button class="btn-delete-contact" data-action="delete" title="Borrar chat y contacto">🗑️</button>
-        `;
+        const imgTag = '<img src="' + contact.avatar + '" alt="Avatar de ' + escapeHTML(contact.name) + '" class="avatar" onerror="this.src=\'img/avatar.webp\'">';
+        const nameSpan = '<span class="contact-name">' + escapeHTML(contact.name) + '</span>';
+        const timeSpan = '<span class="message-time">' + escapeHTML(contact.time) + '</span>';
+        const lastMsg = '<p class="last-message">' + escapeHTML(contact.lastMessage) + '</p>';
+        const deleteBtn = '<button class="btn-delete-contact" data-action="delete" title="Borrar chat y contacto">🗑️</button>';
+        
+        const html = '<div class="contact-info">' +
+            '<div class="contact-row">' + nameSpan + timeSpan + '</div>' +
+            '<div class="contact-row">' + lastMsg + '</div>' +
+            '</div>';
+        
+        contactDiv.innerHTML = imgTag + html + deleteBtn;
         contactsContainer.appendChild(contactDiv);
     });
 }
 
 async function crearNuevoChat() {
-    const newContactName = prompt("Ingresa el nombre del nuevo contacto:");
+    const newContactName = prompt('Ingresa el nombre del nuevo contacto:');
     
-    if (newContactName && newContactName.trim() !== "") {
+    if (newContactName && newContactName.trim() !== '') {
         const nameFormatted = newContactName.trim();
         
         try {
-            const { data: newChat, error } = await supabaseClient
+            const result = await supabaseClient
                 .from('chats')
                 .insert([{
                     user_id: currentUserId,
@@ -233,44 +200,35 @@ async function crearNuevoChat() {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (result.error) throw result.error;
 
             await cargarContactos();
-            await abrirChat(nameFormatted, newChat.id);
+            await abrirChat(nameFormatted, result.data.id);
             
         } catch (error) {
-            if (error.code === '23505') {
-                alert('Ya tienes un chat con este contacto.');
-            } else {
-                console.error('Error al crear chat:', error);
-                alert('Error al crear el chat.');
-            }
+            console.error('Error al crear chat:', error);
         }
     }
 }
 
-// ==========================================
-// GESTIÓN DE MENSAJES
-// ==========================================
 async function abrirChat(contactName, chatId) {
     currentContact = contactName;
     activeName.textContent = contactName;
     
-    // Obtener el chat_id si no se pasó
     if (!chatId) {
-        const { data: chat, error } = await supabaseClient
+        const result = await supabaseClient
             .from('chats')
             .select('id')
             .eq('user_id', currentUserId)
             .eq('contact_name', contactName)
             .maybeSingle();
         
-        if (error || !chat) {
-            console.error('Error al obtener chat:', error);
+        if (result.error || !result.data) {
+            console.error('Error al obtener chat:', result.error);
             return;
         }
         
-        chatId = chat.id;
+        chatId = result.data.id;
     }
     
     currentChatId = chatId;
@@ -297,16 +255,16 @@ async function cargarMensajes() {
     if (!currentChatId) return;
     
     try {
-        const { data: messages, error } = await supabaseClient
+        const result = await supabaseClient
             .from('messages')
             .select('*')
             .eq('chat_id', currentChatId)
             .order('created_at', { ascending: true })
             .limit(MAX_MESSAGES);
 
-        if (error) throw error;
+        if (result.error) throw result.error;
         
-        renderMessages(messages || []);
+        renderMessages(result.data || []);
         
     } catch (error) {
         console.error('Error al cargar mensajes:', error);
@@ -316,37 +274,33 @@ async function cargarMensajes() {
 function renderMessages(messages) {
     messagesContainer.innerHTML = '';
     
-    messages.forEach(msg => {
+    messages.forEach(function(msg) {
         const messageDiv = document.createElement('div');
         const isSent = msg.sender_name === currentUser;
-        messageDiv.classList.add('message', isSent ? 'sent' : 'received');
+        messageDiv.classList.add('message');
+        messageDiv.classList.add(isSent ? 'sent' : 'received');
         messageDiv.dataset.msgId = msg.id;
         
         let contenidoMensaje = '';
         
         if (msg.message_type === 'text') {
-            contenidoMensaje = `<p>${escapeHTML(msg.content)}</p>`;
+            contenidoMensaje = '<p>' + escapeHTML(msg.content) + '</p>';
         } else if (msg.message_type === 'audio' && msg.file_urls && msg.file_urls.length > 0) {
-            contenidoMensaje = `<audio controls src="${msg.file_urls[0]}"></audio>`;
+            contenidoMensaje = '<audio controls src="' + msg.file_urls[0] + '"></audio>';
         } else if (msg.message_type === 'video' && msg.file_urls && msg.file_urls.length > 0) {
-            contenidoMensaje = `<video controls src="${msg.file_urls[0]}" style="max-width: 100%;"></video>`;
+            contenidoMensaje = '<video controls src="' + msg.file_urls[0] + '" style="max-width: 100%;"></video>';
         } else if (msg.message_type === 'image' && msg.file_urls && msg.file_urls.length > 0) {
-            const imagesHtml = msg.file_urls.map(url => 
-                `<img src="${url}" alt="Imagen" style="max-width: 100%; margin: 2px 0;">`
-            ).join('');
+            let imagesHtml = '';
+            msg.file_urls.forEach(function(url) {
+                imagesHtml += '<img src="' + url + '" alt="Imagen" style="max-width: 100%; margin: 2px 0;">';
+            });
             contenidoMensaje = imagesHtml;
         }
 
-        messageDiv.innerHTML = `
-            <div class="msg-signature" style="font-size: 0.75rem; font-weight: bold; color: #0288D1; margin-bottom: 2px;">
-                ${escapeHTML(msg.sender_name)}
-            </div>
-            ${contenidoMensaje}
-            <div class="msg-footer">
-                <span class="msg-time">${formatTime(msg.created_at)}</span>
-                <button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button>
-            </div>
-        `;
+        const firma = '<div class="msg-signature" style="font-size: 0.75rem; font-weight: bold; color: #0288D1; margin-bottom: 2px;">' + escapeHTML(msg.sender_name) + '</div>';
+        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTime(msg.created_at) + '</span><button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button></div>';
+        
+        messageDiv.innerHTML = firma + contenidoMensaje + footer;
         messagesContainer.appendChild(messageDiv);
     });
 
@@ -358,23 +312,25 @@ function suscribirseAMensajes() {
         messageSubscription.unsubscribe();
     }
     
+    const channelName = 'mensajes-' + currentChatId;
+    const filterStr = 'chat_id=eq.' + currentChatId;
+    
     messageSubscription = supabaseClient
-        .channel('mensajes-' + currentChatId)
+        .channel(channelName)
         .on('postgres_changes', 
             { 
                 event: '*', 
                 schema: 'public', 
                 table: 'messages',
-                filter: `chat_id=eq.${currentChatId}`
+                filter: filterStr
             }, 
-            (payload) => {
+            function(payload) {
                 if (payload.eventType === 'INSERT') {
                     cargarMensajes();
-                    // Reproducir sonido de notificación si no es el usuario actual
                     if (payload.new.sender_name !== currentUser) {
                         const notifSound = document.getElementById('notification-sound');
                         if (notifSound) {
-                            notifSound.play().catch(() => {});
+                            notifSound.play().catch(function() {});
                         }
                     }
                 } else if (payload.eventType === 'DELETE') {
@@ -385,15 +341,12 @@ function suscribirseAMensajes() {
         .subscribe();
 }
 
-// ==========================================
-// ENVIAR MENSAJES
-// ==========================================
 async function enviarMensajeTexto() {
     const text = messageInput.value.trim();
     if (text === '' || !currentChatId) return;
 
     try {
-        const { error } = await supabaseClient
+        const result = await supabaseClient
             .from('messages')
             .insert([{
                 chat_id: currentChatId,
@@ -403,10 +356,267 @@ async function enviarMensajeTexto() {
                 file_urls: []
             }]);
 
-        if (error) throw error;
+        if (result.error) throw result.error;
         
         messageInput.value = '';
         
     } catch (error) {
-    console.error("Error al enviar el mensaje:", error);
+        console.error('Error al enviar el mensaje:', error);
+    }
 }
+
+async function enviarMensajeMultimedia(fileUrls, messageType) {
+    if (!currentChatId) return;
+
+    let contentDesc = '';
+    if (messageType === 'audio') contentDesc = 'Nota de voz';
+    else if (messageType === 'video') contentDesc = 'Videomensaje';
+    else contentDesc = 'Imagen';
+
+    try {
+        const result = await supabaseClient
+            .from('messages')
+            .insert([{
+                chat_id: currentChatId,
+                sender_name: currentUser,
+                content: contentDesc,
+                message_type: messageType,
+                file_urls: fileUrls
+            }]);
+
+        if (result.error) throw result.error;
+        
+    } catch (error) {
+        console.error('Error al enviar multimedia:', error);
+    }
+}
+
+async function subirArchivo(file, bucket) {
+    const fileNameParts = file.name.split('.');
+    const fileExt = fileNameParts.length > 1 ? fileNameParts.pop() : 'bin';
+    const fileName = Date.now() + '-' + Math.random().toString(36).substring(7) + '.' + fileExt;
+    const filePath = currentUserId + '/' + fileName;
+
+    const uploadResult = await supabaseClient.storage
+        .from(bucket)
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+        });
+
+    if (uploadResult.error) throw uploadResult.error;
+
+    const urlResult = supabaseClient.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
+
+    return urlResult.data.publicUrl;
+}
+
+async function subirImagenes(files) {
+    if (files.length > MAX_IMAGES_PER_MESSAGE) {
+        alert('Solo puedes subir máximo ' + MAX_IMAGES_PER_MESSAGE + ' imágenes por mensaje.');
+        return;
+    }
+
+    try {
+        const urls = [];
+        for (let i = 0; i < files.length; i++) {
+            const url = await subirArchivo(files[i], 'images');
+            urls.push(url);
+        }
+        await enviarMensajeMultimedia(urls, 'image');
+    } catch (error) {
+        console.error('Error al subir imágenes:', error);
+    }
+}
+
+async function subirAudio(blob) {
+    try {
+        const file = new File([blob], 'audio-' + Date.now() + '.webm', { type: 'audio/webm' });
+        const url = await subirArchivo(file, 'audio');
+        await enviarMensajeMultimedia([url], 'audio');
+    } catch (error) {
+        console.error('Error al subir audio:', error);
+    }
+}
+
+async function subirVideo(blob) {
+    try {
+        const file = new File([blob], 'video-' + Date.now() + '.webm', { type: 'video/webm' });
+        const url = await subirArchivo(file, 'video');
+        await enviarMensajeMultimedia([url], 'video');
+    } catch (error) {
+        console.error('Error al subir video:', error);
+    }
+}
+
+document.getElementById('btn-voice').addEventListener('click', async function() {
+    if (!currentChatId) return;
+
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaChunks = [];
+
+            mediaRecorder.ondataavailable = function(e) {
+                mediaChunks.push(e.data);
+            };
+            mediaRecorder.onstop = async function() {
+                const blob = new Blob(mediaChunks, { type: 'audio/webm' });
+                await subirAudio(blob);
+            };
+
+            mediaRecorder.start();
+            document.getElementById('btn-voice').style.backgroundColor = '#e53e3e';
+            alert('Grabando audio... Haz clic de nuevo para detener y enviar.');
+        } catch (err) {
+            console.error('Error al acceder al micrófono:', err);
+        }
+    } else {
+        mediaRecorder.stop();
+        document.getElementById('btn-voice').style.backgroundColor = '';
+        mediaRecorder.stream.getTracks().forEach(function(t) { t.stop(); });
+    }
+});
+
+document.getElementById('btn-video-msg').addEventListener('click', async function() {
+    if (!currentChatId) return;
+
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaChunks = [];
+
+            mediaRecorder.ondataavailable = function(e) {
+                mediaChunks.push(e.data);
+            };
+            mediaRecorder.onstop = async function() {
+                const blob = new Blob(mediaChunks, { type: 'video/webm' });
+                await subirVideo(blob);
+            };
+
+            mediaRecorder.start();
+            document.getElementById('btn-video-msg').style.backgroundColor = '#e53e3e';
+            alert('Grabando videomensaje... Haz clic de nuevo para detener y enviar.');
+        } catch (err) {
+            console.error('Error al acceder a la cámara:', err);
+        }
+    } else {
+        mediaRecorder.stop();
+        document.getElementById('btn-video-msg').style.backgroundColor = '';
+        mediaRecorder.stream.getTracks().forEach(function(t) { t.stop(); });
+    }
+});
+
+document.getElementById('btn-image').addEventListener('click', function() {
+    if (!currentChatId) {
+        alert('Primero abre un chat.');
+        return;
+    }
+    imageInput.click();
+});
+
+imageInput.addEventListener('change', async function(e) {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+        await subirImagenes(files);
+        imageInput.value = '';
+    }
+});
+
+async function eliminarMensaje(msgId) {
+    try {
+        const result = await supabaseClient
+            .from('messages')
+            .delete()
+            .eq('id', msgId);
+
+        if (result.error) throw result.error;
+        
+        await cargarMensajes();
+        
+    } catch (error) {
+        console.error('Error al eliminar mensaje:', error);
+    }
+}
+
+async function eliminarChat(chatId) {
+    if (!confirm('¿Estás seguro de eliminar este chat?')) return;
+
+    try {
+        await supabaseClient
+            .from('messages')
+            .delete()
+            .eq('chat_id', chatId);
+
+        await supabaseClient
+            .from('chats')
+            .delete()
+            .eq('id', chatId);
+
+        await cargarContactos();
+        
+    } catch (error) {
+        console.error('Error al eliminar chat:', error);
+    }
+}
+
+contactsContainer.addEventListener('click', function(e) {
+    const deleteBtn = e.target.closest('[data-action="delete"]');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const contactItem = deleteBtn.closest('.contact-item');
+        const chatId = contactItem.dataset.chatId;
+        eliminarChat(chatId);
+        return;
+    }
+
+    const contactItem = e.target.closest('.contact-item');
+    if (contactItem) {
+        abrirChat(contactItem.dataset.contactName, contactItem.dataset.chatId);
+    }
+});
+
+messagesContainer.addEventListener('click', function(e) {
+    if (e.target.closest('[data-action="delete-msg"]')) {
+        const messageDiv = e.target.closest('.message');
+        const msgId = messageDiv.dataset.msgId;
+        eliminarMensaje(msgId);
+    }
+});
+
+document.getElementById('btn-send').addEventListener('click', enviarMensajeTexto);
+
+messageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        enviarMensajeTexto();
+    }
+});
+
+usernameInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        registrarUsuario();
+    }
+});
+
+document.getElementById('btn-start').addEventListener('click', registrarUsuario);
+
+document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat);
+
+document.getElementById('btn-back').addEventListener('click', cerrarChat);
+
+window.addEventListener('DOMContentLoaded', async function() {
+    const usuarioInicializado = await inicializarUsuarioActual();
+    
+    if (usuarioInicializado) {
+        loginView.classList.remove('active');
+        chatListView.classList.add('active');
+        await cargarContactos();
+    } else {
+        loginView.classList.add('active');
+        chatListView.classList.remove('active');
+    }
+});
