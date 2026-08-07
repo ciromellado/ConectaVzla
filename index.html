@@ -13,7 +13,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ConectaVzla">
     <link rel="apple-touch-icon" href="img/android-chrome-192.png">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -23,22 +22,26 @@
         
         <div id="login-view" class="view active">
             <div class="login-container">
-                <img src="img/android-chrome-192.png" alt="Logo ConectaVzla" class="app-logo-large">
+                <img src="img/logo.webp" alt="Logo ConectaVzla" class="app-logo-large">
                 <h2>Bienvenido a ConectaVzla</h2>
-                <p>Ingresa tu nombre de usuario para comenzar a chatear:</p>
-                <input type="text" id="username-input" placeholder="Tu nombre o apodo...">
+                <p>Ingresa con tu cuenta segura:</p>
+                <input type="text" id="username-input" placeholder="Usuario" autocomplete="username">
+                <input type="password" id="password-input" placeholder="Contraseña" autocomplete="current-password">
                 <button id="btn-start">Entrar</button>
+                <button id="btn-register" class="btn-secondary">Crear cuenta nueva</button>
+                <p id="login-error"></p>
             </div>
         </div>
 
         <div id="chat-list-view" class="view">
             <header class="app-header">
               <h1 class="app-title">
-                <img src="img/android-chrome-512.png" alt="Logo ConectaVzla" class="app-logo">
+                <img src="img/logo.webp" alt="Logo ConectaVzla" class="app-logo">
                 ConectaVzla
               </h1>
               <span style="font-size: 0.75rem; font-weight: normal; opacity: 0.9;">Kharla Web Solution</span>
               <div class="header-actions">
+                <button id="btn-logout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
                 <button id="btn-new-chat" title="Nuevo Chat" aria-label="Nuevo Chat">➕</button>
               </div>
             </header>
@@ -52,10 +55,12 @@
             </div>
 
             <div class="contacts-list" id="contacts-container">
-                </div>
-        </div> <div id="chat-room-view" class="view">
+            </div>
+        </div>
+
+        <div id="chat-room-view" class="view">
             <header class="chat-header">
-              <button id="btn-back" aria-label="Volver">⬅️</button>
+               <button id="btn-back" aria-label="Volver">⬅️</button>
                <img src="img/avatar.webp" alt="Avatar" class="avatar"> 
                <div class="active-user-info">
                     <span id="active-name">ConectaVzla</span>
@@ -64,16 +69,14 @@
             </header>
 
             <div class="messages-container" id="messages-container">
-                </div>
+            </div>
 
             <footer class="chat-input-bar">
                 <input type="text" id="message-input" placeholder="Escribe un mensaje...">
-                
                 <button id="btn-image" title="Subir imágenes (máx. 2)">📷</button>
                 <button id="btn-voice" title="Grabar nota de voz">🎤</button>
                 <button id="btn-video-msg" title="Grabar videomensaje">📹</button>
                 <button id="btn-send" title="Enviar">➤</button>
-                
                 <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
             </footer>
         </div>
@@ -83,13 +86,13 @@
     <script src="app.js"></script>
     <audio id="notification-sound" src="sonidos/notification.mp3" preload="auto"></audio>
     <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('./sw.js')
-        .then(function() { console.log('Service Worker registrado ✅'); })
-        .catch(function(err) { console.error('Error al registrar SW:', err); });
-    });
-  }
-</script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('./sw.js')
+            .then(function() { console.log('Service Worker registrado'); })
+            .catch(function(err) { console.error('Error al registrar SW:', err); });
+        });
+      }
+    </script>
 </body>
 </html>
