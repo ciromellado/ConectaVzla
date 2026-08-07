@@ -528,3 +528,41 @@ button:focus-visible,
     min-height: 1.2em;
     margin-top: 8px;
 }
+/* ========== ESTILO WHATSAPP ========== */
+.messages-container {
+    background-color: #efeae2 !important;
+    background-image: radial-gradient(#d8d3cb 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+.message {
+    border-radius: 8px !important;
+    padding: 6px 9px !important;
+    max-width: 82% !important;
+    margin: 4px 10px !important;
+    box-shadow: 0 1px 1px rgba(11,20,26,0.13);
+}
+
+.message.sent {
+    background: #d9fdd3 !important;
+    margin-left: auto !important;
+}
+
+.message.received {
+    background: #ffffff !important;
+    margin-right: auto !important;
+}
+
+.msg-checks {
+    color: #8696a9;
+    font-size: 0.8rem;
+    margin-left: 4px;
+}
+
+.msg-checks.read {
+    color: #53bdeb;
+}
+
+#active-status {
+    font-size: 0.75rem;
+}
