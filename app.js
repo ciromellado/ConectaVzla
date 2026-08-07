@@ -408,5 +408,5 @@ async function enviarMensajeTexto() {
         messageInput.value = '';
         
     } catch (error) {
-        console.error('Error al enviar mensaje:', error);
-        alert('Error
+    console.error("Error al enviar el mensaje:", error);
+}
