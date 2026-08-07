@@ -1,5 +1,5 @@
 // ==========================================
-// CONECTAVZLA - SUPABASE CON AUTENTICACIÓN
+// CONECTAVZLA - MODO WHATSAPP
 // ==========================================
 
 const SUPABASE_URL = 'https://uftrifkqbmxetluwupua.supabase.co';
@@ -18,17 +18,27 @@ const chatRoomView = document.getElementById('chat-room-view');
 const messagesContainer = document.getElementById('messages-container');
 const messageInput = document.getElementById('message-input');
 const activeName = document.getElementById('active-name');
+const activeStatus = document.getElementById('active-status');
 const contactsContainer = document.getElementById('contacts-container');
 const usernameInput = document.getElementById('username-input');
 const passwordInput = document.getElementById('password-input');
 const loginError = document.getElementById('login-error');
 const imageInput = document.getElementById('image-input');
+const searchInput = document.getElementById('search-contact');
 
 let currentContact = null;
 let currentUser = null;
 let currentUserId = null;
 let currentChatId = null;
+let currentOtherId = null;
 let messageSubscription = null;
+let presenceChannel = null;
+let allContacts = [];
+let otherOnlineFlag = false;
+let typingFlag = false;
+let typingTimer = null;
+let lastTypingSent = 0;
+let lastSeenLabel = '';
 
 let mediaRecorder;
 let mediaChunks = [];
@@ -52,7 +62,7 @@ function mostrarErrorLogin(mensaje) {
 }
 
 // ==========================================
-// AUTENTICACIÓN (USUARIO + CONTRASEÑA)
+// AUTENTICACIÓN
 // ==========================================
 function emailDesdeUsuario(username) {
     return username.toLowerCase() + EMAIL_DOMAIN;
@@ -149,6 +159,12 @@ async function prepararSesion(authUser) {
         currentUser = authUser.email.split('@')[0];
     }
 
+    // Marcar mi última conexión
+    await supabaseClient
+        .from('users')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('id', currentUserId);
+
     mostrarErrorLogin('');
     loginView.classList.remove('active');
     chatListView.classList.add('active');
@@ -160,11 +176,21 @@ async function cerrarSesion() {
         messageSubscription.unsubscribe();
         messageSubscription = null;
     }
+    salirPresencia();
+
+    if (currentUserId) {
+        await supabaseClient
+            .from('users')
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', currentUserId);
+    }
+
     await supabaseClient.auth.signOut();
     currentUser = null;
     currentUserId = null;
     currentContact = null;
     currentChatId = null;
+    currentOtherId = null;
     chatRoomView.classList.remove('active');
     chatListView.classList.remove('active');
     loginView.classList.add('active');
@@ -172,32 +198,100 @@ async function cerrarSesion() {
 }
 
 // ==========================================
-// GESTIÓN DE CONTACTOS (CHATS)
+// ESTADO EN LÍNEA / ESCRIBIENDO (PRESENCIA)
+// ==========================================
+function actualizarEstadoHeader() {
+    if (!activeStatus) return;
+    if (typingFlag) {
+        activeStatus.textContent = 'escribiendo...';
+    } else if (otherOnlineFlag) {
+        activeStatus.textContent = 'En línea';
+    } else {
+        activeStatus.textContent = lastSeenLabel || 'desconectado';
+    }
+}
+
+function unirsePresencia(chatId) {
+    salirPresencia();
+
+    presenceChannel = supabaseClient.channel('presencia-' + chatId, {
+        config: { presence: { key: currentUserId } }
+    });
+
+    presenceChannel.on('presence', { event: 'sync' }, function() {
+        const state = presenceChannel.presenceState();
+        let online = false;
+        Object.keys(state).forEach(function(key) {
+            const arr = state[key];
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i].user_id && arr[i].user_id !== currentUserId) {
+                    online = true;
+                }
+            }
+        });
+        otherOnlineFlag = online;
+        actualizarEstadoHeader();
+    });
+
+    presenceChannel.on('broadcast', { event: 'typing' }, function() {
+        typingFlag = true;
+        actualizarEstadoHeader();
+        if (typingTimer) clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() {
+            typingFlag = false;
+            actualizarEstadoHeader();
+        }, 2500);
+    });
+
+    presenceChannel.subscribe(async function(status) {
+        if (status === 'SUBSCRIBED') {
+            await presenceChannel.track({
+                user_id: currentUserId,
+                name: currentUser
+            });
+        }
+    });
+}
+
+function salirPresencia() {
+    if (presenceChannel) {
+        presenceChannel.unsubscribe();
+        supabaseClient.removeChannel(presenceChannel);
+        presenceChannel = null;
+    }
+    otherOnlineFlag = false;
+    typingFlag = false;
+}
+
+// ==========================================
+// CONTACTOS (CHATS COMPARTIDOS)
 // ==========================================
 async function cargarContactos() {
     try {
         const result = await supabaseClient
             .from('chats')
             .select('*, messages(content, message_type, created_at)')
-            .eq('user_id', currentUserId)
+            .or('user_a_id.eq.' + currentUserId + ',user_b_id.eq.' + currentUserId)
             .order('created_at', { ascending: false });
 
         if (result.error) throw result.error;
 
         const chats = result.data;
-        const contactsList = [];
+        allContacts = [];
 
         chats.forEach(function(chat) {
+            const otherName = chat.user_a_id === currentUserId ? chat.user_b_name : chat.user_a_name;
+            const otherId = chat.user_a_id === currentUserId ? chat.user_b_id : chat.user_a_id;
             let lastMessage = '¡Nuevo chat iniciado!';
             let time = formatTime(chat.created_at);
-            
+
             if (chat.messages && chat.messages.length > 0) {
                 const sortedMessages = chat.messages.slice().sort(function(a, b) {
                     return new Date(b.created_at) - new Date(a.created_at);
                 });
-                
+
                 const lastMsg = sortedMessages[0];
-                
+
                 if (lastMsg.message_type === 'text') {
                     lastMessage = lastMsg.content;
                 } else if (lastMsg.message_type === 'audio') {
@@ -210,17 +304,18 @@ async function cargarContactos() {
                 time = formatTime(lastMsg.created_at);
             }
 
-            contactsList.push({
+            allContacts.push({
                 id: chat.id,
-                name: chat.contact_name,
+                name: otherName,
+                otherId: otherId,
                 lastMessage: lastMessage,
                 time: time,
-                avatar: chat.contact_avatar || 'img/avatar.webp'
+                avatar: 'img/avatar.webp'
             });
         });
 
-        renderContacts(contactsList);
-        
+        renderContacts(allContacts);
+
     } catch (error) {
         console.error('Error al cargar contactos:', error);
     }
@@ -230,7 +325,7 @@ function renderContacts(contactsList) {
     contactsContainer.innerHTML = '';
 
     if (contactsList.length === 0) {
-        contactsContainer.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">No tienes chats aún. ¡Crea uno con el botón ➕!</p>';
+        contactsContainer.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">No tienes chats aún. ¡Agrega un usuario registrado con el botón ➕!</p>';
         return;
     }
 
@@ -239,81 +334,144 @@ function renderContacts(contactsList) {
         contactDiv.classList.add('contact-item');
         contactDiv.dataset.contactName = contact.name;
         contactDiv.dataset.chatId = contact.id;
+        contactDiv.dataset.otherId = contact.otherId;
 
         const imgTag = '<img src="' + contact.avatar + '" alt="Avatar de ' + escapeHTML(contact.name) + '" class="avatar" onerror="this.src=\'img/avatar.webp\'">';
         const nameSpan = '<span class="contact-name">' + escapeHTML(contact.name) + '</span>';
         const timeSpan = '<span class="message-time">' + escapeHTML(contact.time) + '</span>';
         const lastMsg = '<p class="last-message">' + escapeHTML(contact.lastMessage) + '</p>';
-        const deleteBtn = '<button class="btn-delete-contact" data-action="delete" title="Borrar chat y contacto">🗑️</button>';
-        
+        const deleteBtn = '<button class="btn-delete-contact" data-action="delete" title="Borrar chat">🗑️</button>';
+
         const html = '<div class="contact-info">' +
             '<div class="contact-row">' + nameSpan + timeSpan + '</div>' +
             '<div class="contact-row">' + lastMsg + '</div>' +
             '</div>';
-        
+
         contactDiv.innerHTML = imgTag + html + deleteBtn;
         contactsContainer.appendChild(contactDiv);
     });
 }
 
 async function crearNuevoChat() {
-    const newContactName = prompt('Ingresa el nombre del nuevo contacto:');
-    
-    if (newContactName && newContactName.trim() !== '') {
-        const nameFormatted = newContactName.trim();
-        
-        try {
-            const result = await supabaseClient
+    const newContactName = prompt('Ingresa el nombre de USUARIO REGISTRADO de tu contacto:');
+
+    if (!newContactName || newContactName.trim() === '') return;
+    const nameFormatted = newContactName.trim();
+
+    if (nameFormatted.toLowerCase() === (currentUser || '').toLowerCase()) {
+        alert('No puedes crear un chat contigo mismo.');
+        return;
+    }
+
+    try {
+        const userResult = await supabaseClient
+            .from('users')
+            .select('id, username')
+            .ilike('username', nameFormatted)
+            .maybeSingle();
+
+        if (userResult.error || !userResult.data) {
+            alert('Ese usuario NO está registrado en ConectaVzla. Pídele que cree su cuenta primero.');
+            return;
+        }
+
+        const otherId = userResult.data.id;
+        const otherName = userResult.data.username;
+
+        let aId = currentUserId, aName = currentUser;
+        let bId = otherId, bName = otherName;
+        if (currentUserId > otherId) {
+            aId = otherId; aName = otherName;
+            bId = currentUserId; bName = currentUser;
+        }
+
+        const existResult = await supabaseClient
+            .from('chats')
+            .select('id')
+            .eq('user_a_id', aId)
+            .eq('user_b_id', bId)
+            .maybeSingle();
+
+        let chatId;
+        if (existResult.data) {
+            chatId = existResult.data.id;
+        } else {
+            const insertResult = await supabaseClient
                 .from('chats')
                 .insert([{
-                    user_id: currentUserId,
-                    contact_name: nameFormatted,
-                    contact_avatar: 'img/avatar.webp'
+                    user_a_id: aId, user_a_name: aName,
+                    user_b_id: bId, user_b_name: bName
                 }])
                 .select()
                 .single();
 
-            if (result.error) throw result.error;
-
-            await cargarContactos();
-            await abrirChat(nameFormatted, result.data.id);
-            
-        } catch (error) {
-            console.error('Error al crear chat:', error);
+            if (insertResult.error) throw insertResult.error;
+            chatId = insertResult.data.id;
         }
+
+        await cargarContactos();
+        await abrirChat(otherName, chatId, otherId);
+
+    } catch (error) {
+        console.error('Error al crear chat:', error);
     }
 }
 
 // ==========================================
-// GESTIÓN DE MENSAJES
+// MENSAJES
 // ==========================================
-async function abrirChat(contactName, chatId) {
+async function abrirChat(contactName, chatId, otherId) {
     currentContact = contactName;
     activeName.textContent = contactName;
-    
-    if (!chatId) {
+    currentOtherId = otherId || null;
+
+    if (!chatId || !currentOtherId) {
         const result = await supabaseClient
             .from('chats')
-            .select('id')
-            .eq('user_id', currentUserId)
-            .eq('contact_name', contactName)
-            .maybeSingle();
-        
-        if (result.error || !result.data) {
-            console.error('Error al obtener chat:', result.error);
+            .select('id, user_a_id, user_b_id, user_a_name, user_b_name')
+            .or('user_a_id.eq.' + currentUserId + ',user_b_id.eq.' + currentUserId);
+
+        if (!result.error && result.data) {
+            for (let i = 0; i < result.data.length; i++) {
+                const c = result.data[i];
+                const other = c.user_a_id === currentUserId ? c.user_b_name : c.user_a_name;
+                if (other === contactName) {
+                    chatId = c.id;
+                    currentOtherId = c.user_a_id === currentUserId ? c.user_b_id : c.user_a_id;
+                    break;
+                }
+            }
+        }
+
+        if (!chatId) {
+            console.error('Chat no encontrado');
             return;
         }
-        
-        chatId = result.data.id;
     }
-    
+
     currentChatId = chatId;
-    
+
+    // Buscar "última vez" del contacto
+    lastSeenLabel = 'desconectado';
+    if (currentOtherId) {
+        const seenResult = await supabaseClient
+            .from('users')
+            .select('last_seen')
+            .eq('id', currentOtherId)
+            .maybeSingle();
+
+        if (seenResult.data && seenResult.data.last_seen) {
+            lastSeenLabel = 'Últ. vez ' + formatTime(seenResult.data.last_seen);
+        }
+    }
+
     chatListView.classList.remove('active');
     chatRoomView.classList.add('active');
-    
+    actualizarEstadoHeader();
+
     await cargarMensajes();
     suscribirseAMensajes();
+    unirsePresencia(chatId);
 }
 
 function cerrarChat() {
@@ -321,15 +479,18 @@ function cerrarChat() {
         messageSubscription.unsubscribe();
         messageSubscription = null;
     }
+    salirPresencia();
     chatRoomView.classList.remove('active');
     chatListView.classList.add('active');
     currentContact = null;
     currentChatId = null;
+    currentOtherId = null;
+    cargarContactos();
 }
 
 async function cargarMensajes() {
     if (!currentChatId) return;
-    
+
     try {
         const result = await supabaseClient
             .from('messages')
@@ -339,9 +500,18 @@ async function cargarMensajes() {
             .limit(MAX_MESSAGES);
 
         if (result.error) throw result.error;
-        
+
         renderMessages(result.data || []);
-        
+
+        // Marcar como leídos los mensajes del contacto (doble check azul)
+        supabaseClient
+            .from('messages')
+            .update({ read_at: new Date().toISOString() })
+            .eq('chat_id', currentChatId)
+            .neq('sender_name', currentUser)
+            .is('read_at', null)
+            .then(function() {});
+
     } catch (error) {
         console.error('Error al cargar mensajes:', error);
     }
@@ -349,16 +519,16 @@ async function cargarMensajes() {
 
 function renderMessages(messages) {
     messagesContainer.innerHTML = '';
-    
+
     messages.forEach(function(msg) {
         const messageDiv = document.createElement('div');
         const isSent = msg.sender_name === currentUser;
         messageDiv.classList.add('message');
         messageDiv.classList.add(isSent ? 'sent' : 'received');
         messageDiv.dataset.msgId = msg.id;
-        
+
         let contenidoMensaje = '';
-        
+
         if (msg.message_type === 'text') {
             contenidoMensaje = '<p>' + escapeHTML(msg.content) + '</p>';
         } else if (msg.message_type === 'audio' && msg.file_urls && msg.file_urls.length > 0) {
@@ -373,9 +543,19 @@ function renderMessages(messages) {
             contenidoMensaje = imagesHtml;
         }
 
+        // Doble check estilo WhatsApp
+        let checks = '';
+        if (isSent) {
+            if (msg.read_at) {
+                checks = '<span class="msg-checks read">✓✓</span>';
+            } else {
+                checks = '<span class="msg-checks">✓✓</span>';
+            }
+        }
+
         const firma = '<div class="msg-signature" style="font-size: 0.75rem; font-weight: bold; color: #0288D1; margin-bottom: 2px;">' + escapeHTML(msg.sender_name) + '</div>';
-        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTime(msg.created_at) + '</span><button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button></div>';
-        
+        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTime(msg.created_at) + '</span>' + checks + '<button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button></div>';
+
         messageDiv.innerHTML = firma + contenidoMensaje + footer;
         messagesContainer.appendChild(messageDiv);
     });
@@ -387,19 +567,19 @@ function suscribirseAMensajes() {
     if (messageSubscription) {
         messageSubscription.unsubscribe();
     }
-    
+
     const channelName = 'mensajes-' + currentChatId;
     const filterStr = 'chat_id=eq.' + currentChatId;
-    
+
     messageSubscription = supabaseClient
         .channel(channelName)
-        .on('postgres_changes', 
-            { 
-                event: '*', 
-                schema: 'public', 
+        .on('postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
                 table: 'messages',
                 filter: filterStr
-            }, 
+            },
             function(payload) {
                 if (payload.eventType === 'INSERT') {
                     cargarMensajes();
@@ -409,6 +589,8 @@ function suscribirseAMensajes() {
                             notifSound.play().catch(function() {});
                         }
                     }
+                } else if (payload.eventType === 'UPDATE') {
+                    cargarMensajes();
                 } else if (payload.eventType === 'DELETE') {
                     cargarMensajes();
                 }
@@ -436,9 +618,9 @@ async function enviarMensajeTexto() {
             }]);
 
         if (result.error) throw result.error;
-        
+
         messageInput.value = '';
-        
+
     } catch (error) {
         console.error('Error al enviar el mensaje:', error);
     }
@@ -464,14 +646,14 @@ async function enviarMensajeMultimedia(fileUrls, messageType) {
             }]);
 
         if (result.error) throw result.error;
-        
+
     } catch (error) {
         console.error('Error al enviar multimedia:', error);
     }
 }
 
 // ==========================================
-// SUBIR ARCHIVOS A SUPABASE STORAGE
+// SUBIR ARCHIVOS
 // ==========================================
 async function subirArchivo(file, bucket) {
     const fileNameParts = file.name.split('.');
@@ -534,7 +716,7 @@ async function subirVideo(blob) {
 }
 
 // ==========================================
-// GRABACIÓN DE AUDIO Y VIDEO
+// GRABACIÓN
 // ==========================================
 document.getElementById('btn-voice').addEventListener('click', async function() {
     if (!currentChatId) return;
@@ -613,7 +795,7 @@ imageInput.addEventListener('change', async function(e) {
 });
 
 // ==========================================
-// ELIMINAR MENSAJES Y CHATS
+// ELIMINAR
 // ==========================================
 async function eliminarMensaje(msgId) {
     try {
@@ -623,16 +805,16 @@ async function eliminarMensaje(msgId) {
             .eq('id', msgId);
 
         if (result.error) throw result.error;
-        
+
         await cargarMensajes();
-        
+
     } catch (error) {
         console.error('Error al eliminar mensaje:', error);
     }
 }
 
 async function eliminarChat(chatId) {
-    if (!confirm('¿Estás seguro de eliminar este chat?')) return;
+    if (!confirm('¿Eliminar este chat? Se eliminará para AMBOS usuarios.')) return;
 
     try {
         await supabaseClient
@@ -646,7 +828,7 @@ async function eliminarChat(chatId) {
             .eq('id', chatId);
 
         await cargarContactos();
-        
+
     } catch (error) {
         console.error('Error al eliminar chat:', error);
     }
@@ -667,7 +849,7 @@ contactsContainer.addEventListener('click', function(e) {
 
     const contactItem = e.target.closest('.contact-item');
     if (contactItem) {
-        abrirChat(contactItem.dataset.contactName, contactItem.dataset.chatId);
+        abrirChat(contactItem.dataset.contactName, contactItem.dataset.chatId, contactItem.dataset.otherId);
     }
 });
 
@@ -676,6 +858,28 @@ messagesContainer.addEventListener('click', function(e) {
         const messageDiv = e.target.closest('.message');
         const msgId = messageDiv.dataset.msgId;
         eliminarMensaje(msgId);
+    }
+});
+
+// Buscador de chats (estilo WhatsApp)
+searchInput.addEventListener('input', function(e) {
+    const term = e.target.value.toLowerCase();
+    const filtered = allContacts.filter(function(c) {
+        return c.name.toLowerCase().indexOf(term) !== -1;
+    });
+    renderContacts(filtered);
+});
+
+// Indicador "escribiendo..."
+messageInput.addEventListener('input', function() {
+    const now = Date.now();
+    if (presenceChannel && now - lastTypingSent > 1500) {
+        lastTypingSent = now;
+        presenceChannel.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { from: currentUser }
+        });
     }
 });
 
@@ -705,12 +909,23 @@ document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
 document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat);
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 
+// Actualizar mi "última vez" cada 60 segundos
+setInterval(function() {
+    if (currentUserId) {
+        supabaseClient
+            .from('users')
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', currentUserId)
+            .then(function() {});
+    }
+}, 60000);
+
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
 window.addEventListener('DOMContentLoaded', async function() {
     const result = await supabaseClient.auth.getSession();
-    
+
     if (result.data.session) {
         await prepararSesion(result.data.session.user);
     } else {
