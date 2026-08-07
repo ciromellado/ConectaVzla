@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConectaVzla</title>
+    <meta name="description" content="ConectaVzla es una aplicación de mensajería instantánea moderna para comunicarte de forma rápida y segura.">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#075e54">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div id="login-view" class="view active">
+            <div class="login-container">
+                <img src="img/logo.webp" alt="Logo ConectaVzla" class="app-logo-large">
+                <h2>Bienvenido a ConectaVzla</h2>
+                <p>Ingresa tu nombre de usuario para comenzar a chatear:</p>
+                <input type="text" id="username-input" placeholder="Tu nombre o apodo...">
+                <button id="btn-start">Entrar</button>
+            </div>
+        </div>
+
+        <div id="chat-list-view" class="view">
+            <header class="app-header">
+              <h1 class="app-title">
+                <img src="img/logo.webp" alt="Logo ConectaVzla" class="app-logo">
+                ConectaVzla
+              </h1>
+              <span style="font-size: 0.75rem; font-weight: normal; opacity: 0.9;">Kharla Web Solution</span>
+              <div class="header-actions">
+                <button id="btn-new-chat" title="Nuevo Chat" aria-label="Nuevo Chat">➕</button>
+              </div>
+            </header>
+              
+            <div class="search-bar">
+                <input type="text" id="search-contact" placeholder="Buscar contacto...">
+            </div>
+            
+            <div class="chats-title-container">
+              <h2 class="chats-title">Chats</h2>
+            </div>
+
+            <div class="contacts-list" id="contacts-container">
+                </div>
+        </div> <div id="chat-room-view" class="view">
+            <header class="chat-header">
+              <button id="btn-back" aria-label="Volver">⬅️</button>
+               <img src="img/avatar.webp" alt="Avatar" class="avatar"> 
+               <div class="active-user-info">
+                    <span id="active-name">ConectaVzla</span>
+                    <span class="status-online">En línea</span>
+               </div>
+            </header>
+
+            <div class="messages-container" id="messages-container">
+                </div>
+
+            <footer class="chat-input-bar">
+                <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+                
+                <button id="btn-image" title="Subir imágenes (máx. 2)">📷</button>
+                <button id="btn-voice" title="Grabar nota de voz">🎤</button>
+                <button id="btn-video-msg" title="Grabar videomensaje">📹</button>
+                <button id="btn-send" title="Enviar">➤</button>
+                
+                <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
+            </footer>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+    <audio id="notification-sound" src="sonidos/notification.mp3" preload="auto"></audio>
+</body>
+</html>

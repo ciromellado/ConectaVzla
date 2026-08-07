@@ -1,0 +1,503 @@
+/* Estilos generales limpios y optimizados */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #f0f2f5;
+    color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 480px; /* Simula la pantalla de un teléfono */
+    height: 100%;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+@media (min-width: 481px) {
+    .app-container {
+        height: 85vh;
+        border-radius: 12px;
+    }
+}
+
+.view {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.view.active {
+    display: flex;
+}
+
+/* ==========================================
+   VISTA DE INICIO DE SESIÓN (LOGIN) CENTRADA
+   ========================================== */
+#login-view {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    background-color: #ffffff;
+    padding: 20px;
+}
+
+#login-view.active {
+    display: flex;
+}
+
+.login-container {
+    text-align: center;
+    padding: 2.5rem 2rem;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.app-logo-large {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #0288D1;
+    margin-bottom: 5px;
+}
+
+.login-container h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+}
+
+.login-container p {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 12px 16px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    outline: none;
+    font-size: 1rem;
+    background-color: #f9f9f9;
+    transition: border-color 0.2s;
+}
+
+.login-container input:focus {
+    border-color: #0288D1;
+    background-color: #fff;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    background-color: #0288D1;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.login-container button:hover {
+    background-color: #0277bd;
+}
+
+.login-container button:active {
+    transform: scale(0.98);
+}
+
+/* Cabeceras */
+.app-header, .chat-header {
+    background-color: #0288D1; /* Azul optimizado para mejor contraste y legibilidad */
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-header h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.app-header h1 img.app-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+
+
+
+/* Barra de búsqueda */
+.search-bar {
+    padding: 8px 12px;
+    background-color: #f6f6f6;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    outline: none;
+    font-size: 0.9rem;
+}
+/* Estilos para el título de la sección Chats */
+.chats-title-container {
+    padding: 15px 16px 8px 16px; /* Espaciado: arriba, derecha, abajo, izquierda */
+    background-color: #ffffff; /* Fondo blanco para integrarse */
+}
+
+.chats-title {
+    font-size: 1.6rem; /* Tamaño de fuente grande, similar a la referencia */
+    font-weight: 700;  /* Negrita fuerte */
+    color: #111111;    /* Color oscuro para el texto */
+    margin: 0;
+}
+
+/* Lista de Contactos (Con avatar a la izquierda) */
+.contacts-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.contact-item:hover {
+    background-color: #f9f9f9;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #ccc; /* Color de fondo si la imagen no carga */
+}
+
+.contact-item .avatar {
+    margin-right: 15px;
+}
+
+.call-screen .avatar {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+}
+
+.contact-info {
+    flex: 1;
+}
+
+.contact-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.contact-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.last-message {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Chat Activo */
+.chat-header .avatar {
+    width: 38px;
+    height: 38px;
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.active-user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#active-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.status-online {
+    font-size: 0.75rem;
+    color: #e0f7fa;
+}
+
+/* Contenedor de Mensajes con Fondo de Mapa de Venezuela */
+.messages-container {
+    flex: 1;
+    background-image: linear-gradient(rgba(230, 240, 250, 0.85), rgba(230, 240, 250, 0.85)), url('img/fondo.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.message {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message.received {
+    background-color: #ffffff;
+    align-self: flex-start;
+    border-top-left-radius: 0;
+}
+
+.message.sent {
+    background-color: #dcf8c6;
+    align-self: flex-end;
+    border-top-right-radius: 0;
+}
+
+/* Pie del mensaje (Hora y Botón Borrar) */
+.msg-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.msg-time {
+    font-size: 0.65rem;
+    color: #888;
+}
+
+.btn-delete {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.btn-delete:hover {
+    color: #d9534f;
+}
+
+/* Barra de Entrada */
+.chat-input-bar {
+    background-color: #f0f0f0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#message-input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: none;
+    outline: none;
+    font-size: 0.95rem;
+    background-color: #fff;
+}
+
+.chat-input-bar button {
+    background-color: #33B5FF; /* Sincronizado con el azul claro principal */
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.chat-input-bar button:active {
+    transform: scale(0.95);
+}
+
+/* Pantalla de Llamada VoIP */
+.call-screen {
+    background-color: #0b141a;
+    color: white;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 40px 20px;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+}
+
+.call-content {
+    margin-top: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+
+.call-content h2 {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+#call-status {
+    font-size: 0.95rem;
+    color: #a0aec0;
+}
+
+.call-actions {
+    margin-bottom: 40px;
+}
+
+.btn-hangup {
+    background-color: #e53e3e !important;
+    color: white;
+    border: none;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(229, 62, 62, 0.4);
+    transition: transform 0.2s;
+}
+
+.btn-hangup:active {
+    transform: scale(0.9);
+}
+
+/* Botón para eliminar chat o contacto en la lista principal */
+.btn-delete-contact {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.btn-delete-contact:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Estados de foco visibles para accesibilidad por teclado */
+.search-bar input:focus-visible, 
+#message-input:focus-visible, 
+button:focus-visible,
+#username-input:focus-visible {
+    outline: 2px solid #0288D1;
+    outline-offset: 2px;
+}
+
+/* Scrollbars personalizados y sutiles */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+/* ==========================================
+   ESTILOS ADICIONALES PARA MULTIMEDIA
+   ========================================== */
+.message audio {
+    width: 100%;
+    max-width: 220px;
+    height: 35px;
+    margin-top: 4px;
+}
+
+.message video {
+    width: 100%;
+    max-width: 200px;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: block;
+}
