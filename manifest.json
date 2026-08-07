@@ -1,21 +1,26 @@
 {
   "name": "ConectaVzla",
   "short_name": "ConectaVzla",
-  "description": "Aplicación de mensajería ligera desarrollada por Kharla Web Solution",
-  "start_url": "index.html",
+  "description": "Aplicación de mensajería instantánea para comunicarte de forma rápida y segura.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "background_color": "#075e54",
   "theme_color": "#075e54",
   "icons": [
     {
-      "src": "img/icono.webp",
+      "src": "img/logo.webp",
       "sizes": "192x192",
-      "type": "image/webp"
+      "type": "image/webp",
+      "purpose": "any"
     },
     {
-      "src": "img/icono.webp",
+      "src": "img/logo.webp",
       "sizes": "512x512",
-      "type": "image/webp"
+      "type": "image/webp",
+      "purpose": "any maskable"
     }
   ]
 }
