@@ -626,3 +626,41 @@ html, body {
 #login-view .login-container {
     margin: auto !important;
 }
+/* ========== BARRA SUPERIOR DE AUDIO Y VIDEO ========== */
+.calls-bar {
+    display: flex !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    flex: 0 0 auto !important;
+}
+
+.call-btn {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 10px 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-right: 1px solid #e0e0e0 !important;
+    cursor: pointer !important;
+    color: #075e54 !important;
+}
+
+.call-btn:last-child {
+    border-right: none !important;
+}
+
+.call-icon {
+    font-size: 1.4rem !important;
+}
+
+.call-label {
+    font-size: 0.75rem !important;
+}
+
+.call-btn:active {
+    background: #f0f0f0 !important;
+}
