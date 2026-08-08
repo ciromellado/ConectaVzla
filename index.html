@@ -58,29 +58,38 @@
             </div>
         </div>
 
-        <div id="chat-room-view" class="view">
-            <header class="chat-header">
-               <button id="btn-back" aria-label="Volver">⬅️</button>
-               <img src="img/avatar.webp" alt="Avatar" class="avatar"> 
-               <div class="active-user-info">
-                    <span id="active-name">ConectaVzla</span>
-                    <span class="status-online" id="active-status">En línea</span>
-               </div>
-            </header>
+       <div id="chat-room-view" class="view">
+    <header class="chat-header">
+       <button id="btn-back" aria-label="Volver">⬅️</button>
+       <img src="img/avatar.webp" alt="Avatar" class="avatar"> 
+       <div class="active-user-info">
+            <span id="active-name">ConectaVzla</span>
+            <span class="status-online" id="active-status">En línea</span>
+       </div>
+    </header>
 
-            <div class="messages-container" id="messages-container">
-            </div>
+    <!-- Barra superior de audio y video (como en la imagen) -->
+    <div class="calls-bar">
+        <button id="btn-voice" class="call-btn" title="Grabar nota de voz">
+            <span class="call-icon">🎤</span>
+            <span class="call-label">Nota de voz</span>
+        </button>
+        <button id="btn-video-msg" class="call-btn" title="Grabar videomensaje">
+            <span class="call-icon">📹</span>
+            <span class="call-label">Videomensaje</span>
+        </button>
+    </div>
 
-            <footer class="chat-input-bar">
-                <input type="text" id="message-input" placeholder="Escribe un mensaje...">
-                <button id="btn-image" title="Subir imágenes (máx. 2)">📷</button>
-                <button id="btn-voice" title="Grabar nota de voz">🎤</button>
-                <button id="btn-video-msg" title="Grabar videomensaje">📹</button>
-                <button id="btn-send" title="Enviar">➤</button>
-                <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
-            </footer>
-        </div>
+    <div class="messages-container" id="messages-container">
+    </div>
 
+    <footer class="chat-input-bar">
+        <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+        <button id="btn-image" title="Subir imágenes (máx. 2)">📷</button>
+        <button id="btn-send" title="Enviar">➤</button>
+        <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
+    </footer>
+</div>
     </div>
 
     <script src="app.js"></script>
