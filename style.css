@@ -566,3 +566,63 @@ button:focus-visible,
 #active-status {
     font-size: 0.75rem;
 }
+/* ========== FIX: BARRA DE ESCRITURA SIEMPRE VISIBLE ========== */
+html, body {
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+.app-container {
+    height: 100vh !important;
+    height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+.view {
+    display: none !important;
+    flex: 1 !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+}
+
+.view.active {
+    display: flex !important;
+}
+
+/* Sala de chat: header arriba, mensajes con scroll, barra FIJA abajo */
+.chat-header {
+    flex: 0 0 auto !important;
+}
+
+.messages-container {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0 !important;
+}
+
+.chat-input-bar {
+    flex: 0 0 auto !important;
+}
+
+/* Lista de chats: solo la lista hace scroll */
+.app-header, .search-bar, .chats-title-container {
+    flex: 0 0 auto !important;
+}
+
+.contacts-list {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0 !important;
+}
+
+/* Login centrado */
+#login-view .login-container {
+    margin: auto !important;
+}
