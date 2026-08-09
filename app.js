@@ -25,7 +25,9 @@ const passwordInput = document.getElementById('password-input');
 const loginError = document.getElementById('login-error');
 const imageInput = document.getElementById('image-input');
 const searchInput = document.getElementById('search-contact');
-
+const myAvatarImg = document.getElementById('my-avatar');
+const contactAvatarImg = document.getElementById('contact-avatar');
+const avatarInput = document.getElementById('avatar-input');
 let currentContact = null;
 let currentUser = null;
 let currentUserId = null;
@@ -149,12 +151,15 @@ async function prepararSesion(authUser) {
 
     const result = await supabaseClient
         .from('users')
-        .select('username')
+        .select('username, avatar_url')
         .eq('id', authUser.id)
         .maybeSingle();
 
     if (result.data) {
         currentUser = result.data.username;
+        if (myAvatarImg) {
+            myAvatarImg.src = result.data.avatar_url || 'img/avatar.webp';
+        }
     } else {
         currentUser = authUser.email.split('@')[0];
     }
@@ -279,6 +284,17 @@ async function cargarContactos() {
         const chats = result.data;
         allContacts = [];
 
+        // Cargar avatares de los usuarios
+        const usersResult = await supabaseClient
+            .from('users')
+            .select('id, avatar_url');
+        const avatarMap = {};
+        if (!usersResult.error && usersResult.data) {
+            usersResult.data.forEach(function(u) {
+                avatarMap[u.id] = u.avatar_url;
+            });
+        }
+
         chats.forEach(function(chat) {
             const otherName = chat.user_a_id === currentUserId ? chat.user_b_name : chat.user_a_name;
             const otherId = chat.user_a_id === currentUserId ? chat.user_b_id : chat.user_a_id;
@@ -396,11 +412,12 @@ async function crearNuevoChat() {
         if (existResult.data) {
             chatId = existResult.data.id;
         } else {
-            const insertResult = await supabaseClient
+             const result = await supabaseClient
                 .from('chats')
                 .insert([{
-                    user_a_id: aId, user_a_name: aName,
-                    user_b_id: bId, user_b_name: bName
+                    user_id: currentUserId,
+                    contact_name: nameFormatted,
+                    contact_avatar: avatarMap[otherId] || 'img/avatar.webp'
                 }])
                 .select()
                 .single();
