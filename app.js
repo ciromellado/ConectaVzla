@@ -956,7 +956,7 @@ document.getElementById('btn-register').addEventListener('click', crearCuenta);
 document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
 document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat);
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
-
+document.getElementById('btn-export').addEventListener('click', exportarContactos);
 setInterval(function() {
     if (currentUserId) {
         supabaseClient
@@ -999,6 +999,35 @@ if (avatarInput) {
 
         avatarInput.value = '';
     });
+}
+// ==========================================
+// EXPORTAR CONTACTOS (TEXTO)
+// ==========================================
+function exportarContactos() {
+    if (allContacts.length === 0) {
+        alert('No tienes contactos para exportar.');
+        return;
+    }
+
+    const fecha = new Date().toLocaleString();
+
+    let contenido = 'CONTACTOS DE CONECTAVZLA\n';
+    contenido += 'Usuario: ' + currentUser + '\n';
+    contenido += 'Fecha: ' + fecha + '\n';
+    contenido += '--------------------------------\n';
+    allContacts.forEach(function(c, i) {
+        contenido += (i + 1) + '. ' + c.name + '\n';
+    });
+    contenido += '--------------------------------\n';
+    contenido += 'Total de contactos: ' + allContacts.length + '\n';
+
+    const blob = new Blob([contenido], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = 'contactos-conectavzla.txt';
+    enlace.click();
+    URL.revokeObjectURL(url);
 }
 
 // ==========================================
