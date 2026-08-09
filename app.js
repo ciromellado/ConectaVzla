@@ -1,5 +1,5 @@
 // ==========================================
-// CONECTAVZLA - MODO WHATSAPP
+// CONECTAVZLA - MODO WHATSAPP + AVATARES
 // ==========================================
 
 const SUPABASE_URL = 'https://uftrifkqbmxetluwupua.supabase.co';
@@ -28,6 +28,7 @@ const searchInput = document.getElementById('search-contact');
 const myAvatarImg = document.getElementById('my-avatar');
 const contactAvatarImg = document.getElementById('contact-avatar');
 const avatarInput = document.getElementById('avatar-input');
+
 let currentContact = null;
 let currentUser = null;
 let currentUserId = null;
@@ -164,7 +165,6 @@ async function prepararSesion(authUser) {
         currentUser = authUser.email.split('@')[0];
     }
 
-    // Marcar mi última conexión
     await supabaseClient
         .from('users')
         .update({ last_seen: new Date().toISOString() })
@@ -326,7 +326,7 @@ async function cargarContactos() {
                 otherId: otherId,
                 lastMessage: lastMessage,
                 time: time,
-                avatar: 'img/avatar.webp'
+                avatar: avatarMap[otherId] || 'img/avatar.webp'
             });
         });
 
@@ -394,6 +394,7 @@ async function crearNuevoChat() {
         const otherId = userResult.data.id;
         const otherName = userResult.data.username;
 
+        // Normalizar el par (siempre mismo orden)
         let aId = currentUserId, aName = currentUser;
         let bId = otherId, bName = otherName;
         if (currentUserId > otherId) {
@@ -401,6 +402,7 @@ async function crearNuevoChat() {
             bId = currentUserId; bName = currentUser;
         }
 
+        // ¿Ya existe este chat?
         const existResult = await supabaseClient
             .from('chats')
             .select('id')
@@ -412,18 +414,37 @@ async function crearNuevoChat() {
         if (existResult.data) {
             chatId = existResult.data.id;
         } else {
-             const result = await supabaseClient
+            // ✅ CORREGIDO: usar columnas nuevas de la tabla chats
+            const insertResult = await supabaseClient
                 .from('chats')
                 .insert([{
-                    user_id: currentUserId,
-                    contact_name: nameFormatted,
-                    contact_avatar: avatarMap[otherId] || 'img/avatar.webp'
+                    user_a_id: aId, user_a_name: aName,
+                    user_b_id: bId, user_b_name: bName
                 }])
                 .select()
                 .single();
 
-            if (insertResult.error) throw insertResult.error;
-            chatId = insertResult.data.id;
+            if (insertResult.error) {
+                // Si falló por duplicado (caso raro: ambos se agregaron al mismo tiempo)
+                if (insertResult.error.code === '23505') {
+                    const retry = await supabaseClient
+                        .from('chats')
+                        .select('id')
+                        .eq('user_a_id', aId)
+                        .eq('user_b_id', bId)
+                        .maybeSingle();
+                    chatId = retry.data ? retry.data.id : null;
+                } else {
+                    throw insertResult.error;
+                }
+            } else {
+                chatId = insertResult.data.id;
+            }
+        }
+
+        if (!chatId) {
+            alert('No se pudo crear el chat.');
+            return;
         }
 
         await cargarContactos();
@@ -467,6 +488,18 @@ async function abrirChat(contactName, chatId, otherId) {
     }
 
     currentChatId = chatId;
+
+    // ✅ NUEVO: Cargar avatar del contacto
+    if (contactAvatarImg && currentOtherId) {
+        const avResult = await supabaseClient
+            .from('users')
+            .select('avatar_url')
+            .eq('id', currentOtherId)
+            .maybeSingle();
+        contactAvatarImg.src = (avResult.data && avResult.data.avatar_url)
+            ? avResult.data.avatar_url
+            : 'img/avatar.webp';
+    }
 
     // Buscar "última vez" del contacto
     lastSeenLabel = 'desconectado';
@@ -878,7 +911,6 @@ messagesContainer.addEventListener('click', function(e) {
     }
 });
 
-// Buscador de chats (estilo WhatsApp)
 searchInput.addEventListener('input', function(e) {
     const term = e.target.value.toLowerCase();
     const filtered = allContacts.filter(function(c) {
@@ -887,7 +919,6 @@ searchInput.addEventListener('input', function(e) {
     renderContacts(filtered);
 });
 
-// Indicador "escribiendo..."
 messageInput.addEventListener('input', function() {
     const now = Date.now();
     if (presenceChannel && now - lastTypingSent > 1500) {
@@ -926,7 +957,6 @@ document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
 document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat);
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 
-// Actualizar mi "última vez" cada 60 segundos
 setInterval(function() {
     if (currentUserId) {
         supabaseClient
@@ -936,6 +966,40 @@ setInterval(function() {
             .then(function() {});
     }
 }, 60000);
+
+// ==========================================
+// ✅ CAMBIAR AVATAR (NUEVO)
+// ==========================================
+if (myAvatarImg) {
+    myAvatarImg.addEventListener('click', function() {
+        avatarInput.click();
+    });
+}
+
+if (avatarInput) {
+    avatarInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const url = await subirArchivo(file, 'images');
+
+            const result = await supabaseClient
+                .from('users')
+                .update({ avatar_url: url })
+                .eq('id', currentUserId);
+
+            if (result.error) throw result.error;
+
+            myAvatarImg.src = url;
+            await cargarContactos();
+        } catch (error) {
+            console.error('Error al cambiar el avatar:', error);
+        }
+
+        avatarInput.value = '';
+    });
+}
 
 // ==========================================
 // INICIALIZACIÓN
