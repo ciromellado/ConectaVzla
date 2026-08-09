@@ -957,6 +957,7 @@ document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
 document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat);
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 document.getElementById('btn-export').addEventListener('click', exportarContactos);
+document.getElementById('btn-change-pass').addEventListener('click', cambiarContrasena);
 setInterval(function() {
     if (currentUserId) {
         supabaseClient
@@ -1029,7 +1030,35 @@ function exportarContactos() {
     enlace.click();
     URL.revokeObjectURL(url);
 }
+// ==========================================
+// CAMBIAR CONTRASEÑA
+// ==========================================
+async function cambiarContrasena() {
+    const nueva = prompt('Escribe tu NUEVA contraseña (mínimo 6 caracteres):');
+    if (!nueva) return;
 
+    if (nueva.length < 6) {
+        alert('La contraseña debe tener al menos 6 caracteres.');
+        return;
+    }
+
+    const confirma = prompt('Repite la nueva contraseña:');
+    if (confirma !== nueva) {
+        alert('Las contraseñas no coinciden. No se cambió nada.');
+        return;
+    }
+
+    try {
+        const result = await supabaseClient.auth.updateUser({ password: nueva });
+
+        if (result.error) throw result.error;
+
+        alert('✅ Contraseña actualizada. Úsala la próxima vez que entres.');
+    } catch (error) {
+        console.error('Error al cambiar la contraseña:', error);
+        alert('No se pudo cambiar la contraseña. Intenta de nuevo.');
+    }
+}
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
