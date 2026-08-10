@@ -28,6 +28,10 @@ const searchInput = document.getElementById('search-contact');
 const myAvatarImg = document.getElementById('my-avatar');
 const contactAvatarImg = document.getElementById('contact-avatar');
 const avatarInput = document.getElementById('avatar-input');
+const statusView = document.getElementById('status-view');
+const statusListContainer = document.getElementById('status-list');
+const statusViewer = document.getElementById('status-viewer');
+const statusImageInput = document.getElementById('status-image-input');
 
 let currentContact = null;
 let currentUser = null;
@@ -42,10 +46,11 @@ let typingFlag = false;
 let typingTimer = null;
 let lastTypingSent = 0;
 let lastSeenLabel = '';
-
 let mediaRecorder;
 let mediaChunks = [];
-
+let novedadesAgrupadas = [];
+let pendingStatusText = '';
+let visorActual = null;
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -958,6 +963,12 @@ document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 document.getElementById('btn-export').addEventListener('click', exportarContactos);
 document.getElementById('btn-change-pass').addEventListener('click', cambiarContrasena);
+document.getElementById('btn-status-tab').addEventListener('click', abrirNovedades);
+document.getElementById('btn-status-back').addEventListener('click', cerrarNovedades);
+document.getElementById('viewer-close').addEventListener('click', cerrarVisorNovedad);
+document.getElementById('viewer-prev').addEventListener('click', visorAnterior);
+document.getElementById('viewer-next').addEventListener('click', visorSiguiente);
+document.getElementById('viewer-delete').addEventListener('click', eliminarNovedadActual);
 setInterval(function() {
     if (currentUserId) {
         supabaseClient
@@ -1058,6 +1069,237 @@ async function cambiarContrasena() {
         console.error('Error al cambiar la contraseña:', error);
         alert('No se pudo cambiar la contraseña. Intenta de nuevo.');
     }
+}
+// ==========================================
+// NOVEDADES (ESTADOS 24 HORAS)
+// ==========================================
+function abrirNovedades() {
+    chatListView.classList.remove('active');
+    statusView.classList.add('active');
+    cargarNovedades();
+}
+
+function cerrarNovedades() {
+    statusView.classList.remove('active');
+    chatListView.classList.add('active');
+}
+
+async function cargarNovedades() {
+    try {
+        const limite24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+        // Limpiar mis novedades vencidas
+        supabaseClient
+            .from('statuses')
+            .delete()
+            .eq('user_id', currentUserId)
+            .lt('created_at', limite24h)
+            .then(function() {});
+
+        const result = await supabaseClient
+            .from('statuses')
+            .select('*')
+            .gte('created_at', limite24h)
+            .order('created_at', { ascending: false });
+
+        if (result.error) throw result.error;
+
+        const usersResult = await supabaseClient
+            .from('users')
+            .select('id, avatar_url');
+        const avatarMap = {};
+        if (!usersResult.error && usersResult.data) {
+            usersResult.data.forEach(function(u) {
+                avatarMap[u.id] = u.avatar_url;
+            });
+        }
+
+        const porUsuario = {};
+        result.data.forEach(function(st) {
+            if (!porUsuario[st.user_id]) {
+                porUsuario[st.user_id] = {
+                    userId: st.user_id,
+                    username: st.username,
+                    avatar: avatarMap[st.user_id] || 'img/avatar.webp',
+                    items: []
+                };
+            }
+            porUsuario[st.user_id].items.push(st);
+        });
+
+        novedadesAgrupadas = Object.values(porUsuario);
+        renderNovedades();
+
+    } catch (error) {
+        console.error('Error al cargar novedades:', error);
+    }
+}
+
+function renderNovedades() {
+    statusListContainer.innerHTML = '';
+
+    // Fila "Mi estado"
+    const myDiv = document.createElement('div');
+    myDiv.classList.add('status-item');
+    myDiv.innerHTML = '<div style="position:relative;">' +
+        '<img src="' + (myAvatarImg ? myAvatarImg.src : 'img/avatar.webp') + '" class="avatar status-avatar">' +
+        '<span class="status-add-badge">+</span></div>' +
+        '<div class="contact-info"><span class="contact-name">Mi estado</span>' +
+        '<p class="last-message">Toca para agregar una novedad</p></div>';
+    myDiv.addEventListener('click', publicarNovedad);
+    statusListContainer.appendChild(myDiv);
+
+    if (novedadesAgrupadas.length === 0) {
+        const empty = document.createElement('p');
+        empty.style.textAlign = 'center';
+        empty.style.padding = '20px';
+        empty.style.opacity = '0.7';
+        empty.textContent = 'No hay novedades en las últimas 24 horas.';
+        statusListContainer.appendChild(empty);
+        return;
+    }
+
+    novedadesAgrupadas.forEach(function(grupo, index) {
+        const div = document.createElement('div');
+        div.classList.add('status-item');
+        const esMio = grupo.userId === currentUserId;
+        div.innerHTML = '<img src="' + grupo.avatar + '" class="avatar status-avatar' + (esMio ? '' : ' status-ring') + '">' +
+            '<div class="contact-info"><span class="contact-name">' + escapeHTML(grupo.username) + (esMio ? ' (tú)' : '') + '</span>' +
+            '<p class="last-message">' + grupo.items.length + ' novedad(es) · ' + formatTime(grupo.items[0].created_at) + '</p></div>';
+        div.addEventListener('click', function() {
+            abrirVisorNovedad(index);
+        });
+        statusListContainer.appendChild(div);
+    });
+}
+
+async function publicarNovedad() {
+    const texto = prompt('Escribe el texto de tu novedad (o deja vacío y pulsa Aceptar):');
+    const contenido = texto === null ? '' : texto.trim();
+
+    const quiereFoto = confirm('¿Agregar una foto a tu novedad?');
+
+    if (!quiereFoto && contenido === '') {
+        alert('Tu novedad está vacía. Escribe algo o agrega una foto.');
+        return;
+    }
+
+    if (quiereFoto) {
+        pendingStatusText = contenido;
+        statusImageInput.click();
+        return;
+    }
+
+    await insertarNovedad(contenido, null);
+}
+
+statusImageInput.addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    statusImageInput.value = '';
+    if (!file) return;
+
+    try {
+        const url = await subirArchivo(file, 'images');
+        await insertarNovedad(pendingStatusText || null, url);
+    } catch (err) {
+        console.error('Error al subir la foto de la novedad:', err);
+    }
+});
+
+async function insertarNovedad(contenido, imageUrl) {
+    try {
+        const result = await supabaseClient
+            .from('statuses')
+            .insert([{
+                user_id: currentUserId,
+                username: currentUser,
+                content: contenido,
+                image_url: imageUrl
+            }]);
+
+        if (result.error) throw result.error;
+
+        await cargarNovedades();
+    } catch (error) {
+        console.error('Error al publicar novedad:', error);
+    }
+}
+
+// ---------- Visor de novedades ----------
+function abrirVisorNovedad(grupoIndex) {
+    const grupo = novedadesAgrupadas[grupoIndex];
+    if (!grupo) return;
+    visorActual = { items: grupo.items, pos: 0, username: grupo.username, avatar: grupo.avatar };
+    mostrarVisorPosicion();
+    statusViewer.classList.add('visible');
+}
+
+function mostrarVisorPosicion() {
+    const item = visorActual.items[visorActual.pos];
+
+    document.getElementById('viewer-name').textContent = visorActual.username;
+    document.getElementById('viewer-time').textContent = formatTime(item.created_at);
+    document.getElementById('viewer-avatar').src = visorActual.avatar;
+    document.getElementById('viewer-counter').textContent = (visorActual.pos + 1) + ' / ' + visorActual.items.length;
+
+    const img = document.getElementById('viewer-image');
+    if (item.image_url) {
+        img.src = item.image_url;
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+
+    const txt = document.getElementById('viewer-text');
+    if (item.content) {
+        txt.textContent = item.content;
+        txt.style.display = 'block';
+    } else {
+        txt.style.display = 'none';
+    }
+
+    document.getElementById('viewer-delete').style.display =
+        (item.user_id === currentUserId) ? 'block' : 'none';
+}
+
+function visorAnterior() {
+    if (visorActual && visorActual.pos > 0) {
+        visorActual.pos--;
+        mostrarVisorPosicion();
+    }
+}
+
+function visorSiguiente() {
+    if (visorActual && visorActual.pos < visorActual.items.length - 1) {
+        visorActual.pos++;
+        mostrarVisorPosicion();
+    } else {
+        cerrarVisorNovedad();
+    }
+}
+
+function cerrarVisorNovedad() {
+    statusViewer.classList.remove('visible');
+    visorActual = null;
+}
+
+async function eliminarNovedadActual() {
+    if (!visorActual) return;
+    const item = visorActual.items[visorActual.pos];
+    if (!confirm('¿Eliminar esta novedad?')) return;
+
+    const result = await supabaseClient
+        .from('statuses')
+        .delete()
+        .eq('id', item.id);
+
+    if (result.error) {
+        console.error(result.error);
+        return;
+    }
+
+    cerrarVisorNovedad();
+    await cargarNovedades();
 }
 // ==========================================
 // INICIALIZACIÓN
