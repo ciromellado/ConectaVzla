@@ -1174,36 +1174,38 @@ function renderNovedades() {
 }
 
 async function publicarNovedad() {
-    const texto = prompt('Escribe el texto de tu novedad (o deja vacío y pulsa Aceptar):');
-    const contenido = texto === null ? '' : texto.trim();
-
-    const quiereFoto = confirm('¿Agregar una foto a tu novedad?');
-
-    if (!quiereFoto && contenido === '') {
-        alert('Tu novedad está vacía. Escribe algo o agrega una foto.');
-        return;
-    }
+    const quiereFoto = confirm('¿Agregar una foto a tu novedad?\n\nAceptar = sí, con foto\nCancelar = solo texto');
 
     if (quiereFoto) {
-        pendingStatusText = contenido;
+        // Abrir selector INMEDIATAMENTE (gesto directo del usuario)
         statusImageInput.click();
         return;
     }
 
-    await insertarNovedad(contenido, null);
+    // Solo texto
+    const texto = prompt('Escribe tu novedad:');
+    if (!texto || texto.trim() === '') {
+        alert('Tu novedad está vacía. Escribe algo.');
+        return;
+    }
+    await insertarNovedad(texto.trim(), null);
 }
-
 statusImageInput.addEventListener('change', async function(e) {
     const file = e.target.files[0];
     statusImageInput.value = '';
     if (!file) return;
 
     try {
+        // Pedir texto DESPUÉS de seleccionar la foto
+        const texto = prompt('Escribe un texto para tu novedad (puedes dejarlo vacío):');
+        const contenido = (texto === null || texto.trim() === '') ? null : texto.trim();
+
         const url = await subirArchivo(file, 'images');
-        await insertarNovedad(pendingStatusText || null, url);
+        await insertarNovedad(contenido, url);
     } catch (err) {
         console.error('Error al subir la foto de la novedad:', err);
     }
+});
 });
 
 async function insertarNovedad(contenido, imageUrl) {
