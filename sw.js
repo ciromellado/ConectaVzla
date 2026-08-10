@@ -1,4 +1,4 @@
-const CACHE_NAME = 'conectavzla-v10';
+const CACHE_NAME = 'conectavzla-v11';
 const CORE_ASSETS = [
   './',
   './index.html',
