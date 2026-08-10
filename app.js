@@ -51,6 +51,7 @@ let mediaChunks = [];
 let novedadesAgrupadas = [];
 let pendingStatusText = '';
 let visorActual = null;
+
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -289,7 +290,6 @@ async function cargarContactos() {
         const chats = result.data;
         allContacts = [];
 
-        // Cargar avatares de los usuarios
         const usersResult = await supabaseClient
             .from('users')
             .select('id, avatar_url');
@@ -399,7 +399,6 @@ async function crearNuevoChat() {
         const otherId = userResult.data.id;
         const otherName = userResult.data.username;
 
-        // Normalizar el par (siempre mismo orden)
         let aId = currentUserId, aName = currentUser;
         let bId = otherId, bName = otherName;
         if (currentUserId > otherId) {
@@ -407,7 +406,6 @@ async function crearNuevoChat() {
             bId = currentUserId; bName = currentUser;
         }
 
-        // ¿Ya existe este chat?
         const existResult = await supabaseClient
             .from('chats')
             .select('id')
@@ -419,7 +417,6 @@ async function crearNuevoChat() {
         if (existResult.data) {
             chatId = existResult.data.id;
         } else {
-            // ✅ CORREGIDO: usar columnas nuevas de la tabla chats
             const insertResult = await supabaseClient
                 .from('chats')
                 .insert([{
@@ -430,7 +427,6 @@ async function crearNuevoChat() {
                 .single();
 
             if (insertResult.error) {
-                // Si falló por duplicado (caso raro: ambos se agregaron al mismo tiempo)
                 if (insertResult.error.code === '23505') {
                     const retry = await supabaseClient
                         .from('chats')
@@ -494,7 +490,6 @@ async function abrirChat(contactName, chatId, otherId) {
 
     currentChatId = chatId;
 
-    // ✅ NUEVO: Cargar avatar del contacto
     if (contactAvatarImg && currentOtherId) {
         const avResult = await supabaseClient
             .from('users')
@@ -506,7 +501,6 @@ async function abrirChat(contactName, chatId, otherId) {
             : 'img/avatar.webp';
     }
 
-    // Buscar "última vez" del contacto
     lastSeenLabel = 'desconectado';
     if (currentOtherId) {
         const seenResult = await supabaseClient
@@ -558,7 +552,6 @@ async function cargarMensajes() {
 
         renderMessages(result.data || []);
 
-        // Marcar como leídos los mensajes del contacto (doble check azul)
         supabaseClient
             .from('messages')
             .update({ read_at: new Date().toISOString() })
@@ -598,7 +591,6 @@ function renderMessages(messages) {
             contenidoMensaje = imagesHtml;
         }
 
-        // Doble check estilo WhatsApp
         let checks = '';
         if (isSent) {
             if (msg.read_at) {
@@ -969,6 +961,7 @@ document.getElementById('viewer-close').addEventListener('click', cerrarVisorNov
 document.getElementById('viewer-prev').addEventListener('click', visorAnterior);
 document.getElementById('viewer-next').addEventListener('click', visorSiguiente);
 document.getElementById('viewer-delete').addEventListener('click', eliminarNovedadActual);
+
 setInterval(function() {
     if (currentUserId) {
         supabaseClient
@@ -980,7 +973,7 @@ setInterval(function() {
 }, 60000);
 
 // ==========================================
-// ✅ CAMBIAR AVATAR (NUEVO)
+// ✅ CAMBIAR AVATAR
 // ==========================================
 if (myAvatarImg) {
     myAvatarImg.addEventListener('click', function() {
@@ -1012,6 +1005,7 @@ if (avatarInput) {
         avatarInput.value = '';
     });
 }
+
 // ==========================================
 // EXPORTAR CONTACTOS (TEXTO)
 // ==========================================
@@ -1041,6 +1035,7 @@ function exportarContactos() {
     enlace.click();
     URL.revokeObjectURL(url);
 }
+
 // ==========================================
 // CAMBIAR CONTRASEÑA
 // ==========================================
@@ -1070,6 +1065,7 @@ async function cambiarContrasena() {
         alert('No se pudo cambiar la contraseña. Intenta de nuevo.');
     }
 }
+
 // ==========================================
 // NOVEDADES (ESTADOS 24 HORAS)
 // ==========================================
@@ -1088,7 +1084,6 @@ async function cargarNovedades() {
     try {
         const limite24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-        // Limpiar mis novedades vencidas
         supabaseClient
             .from('statuses')
             .delete()
@@ -1138,7 +1133,6 @@ async function cargarNovedades() {
 function renderNovedades() {
     statusListContainer.innerHTML = '';
 
-    // Fila "Mi estado"
     const myDiv = document.createElement('div');
     myDiv.classList.add('status-item');
     myDiv.innerHTML = '<div style="position:relative;">' +
@@ -1177,12 +1171,10 @@ async function publicarNovedad() {
     const quiereFoto = confirm('¿Agregar una foto a tu novedad?\n\nAceptar = sí, con foto\nCancelar = solo texto');
 
     if (quiereFoto) {
-        // Abrir selector INMEDIATAMENTE (gesto directo del usuario)
         statusImageInput.click();
         return;
     }
 
-    // Solo texto
     const texto = prompt('Escribe tu novedad:');
     if (!texto || texto.trim() === '') {
         alert('Tu novedad está vacía. Escribe algo.');
@@ -1190,13 +1182,13 @@ async function publicarNovedad() {
     }
     await insertarNovedad(texto.trim(), null);
 }
+
 statusImageInput.addEventListener('change', async function(e) {
     const file = e.target.files[0];
     statusImageInput.value = '';
     if (!file) return;
 
     try {
-        // Pedir texto DESPUÉS de seleccionar la foto
         const texto = prompt('Escribe un texto para tu novedad (puedes dejarlo vacío):');
         const contenido = (texto === null || texto.trim() === '') ? null : texto.trim();
 
@@ -1205,7 +1197,6 @@ statusImageInput.addEventListener('change', async function(e) {
     } catch (err) {
         console.error('Error al subir la foto de la novedad:', err);
     }
-});
 });
 
 async function insertarNovedad(contenido, imageUrl) {
@@ -1303,6 +1294,7 @@ async function eliminarNovedadActual() {
     cerrarVisorNovedad();
     await cargarNovedades();
 }
+
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
