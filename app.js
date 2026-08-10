@@ -603,7 +603,7 @@ function renderMessages(messages) {
 
         if (msg.message_type === 'text') {
             contenidoMensaje = '<p>' + convertirEnlaces(escapeHTML(msg.content)) + '</p>';
-        } 
+        } else if (msg.message_type === 'audio' && msg.file_urls && msg.file_urls.length > 0) {
         else if (msg.message_type === 'audio' && msg.file_urls && msg.file_urls.length > 0) {
         
         }
