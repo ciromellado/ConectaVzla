@@ -20,6 +20,7 @@
 
     <div class="app-container">
         
+        <!-- ========== LOGIN ========== -->
         <div id="login-view" class="view active">
             <div class="login-container">
                 <img src="img/logo.webp" alt="Logo ConectaVzla" class="app-logo-large">
@@ -33,6 +34,7 @@
             </div>
         </div>
 
+        <!-- ========== LISTA DE CHATS ========== -->
         <div id="chat-list-view" class="view">
             <header class="app-header">
               <h1 class="app-title">
@@ -40,14 +42,14 @@
                 ConectaVzla
               </h1>
                 <div class="header-actions">
-                <img id="my-avatar" src="img/avatar.webp" alt="Mi avatar" class="my-avatar" title="Toca para cambiar tu avatar">
-                <button id="btn-status-tab" title="Novedades" aria-label="Novedades">🌟</button>
-                <button id="btn-change-pass" title="Cambiar contraseña" aria-label="Cambiar contraseña">🔑</button>
-                <button id="btn-export" title="Exportar contactos" aria-label="Exportar contactos">📤</button>
-                <button id="btn-logout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
-                <button id="btn-new-chat" title="Nuevo Chat" aria-label="Nuevo Chat">➕</button>
-              </div>
-              <input type="file" id="avatar-input" accept="image/*" style="display: none;">
+                    <img id="my-avatar" src="img/avatar.webp" alt="Mi avatar" class="my-avatar" title="Toca para cambiar tu avatar">
+                    <button id="btn-status-tab" title="Novedades" aria-label="Novedades">🌟</button>
+                    <button id="btn-change-pass" title="Cambiar contraseña" aria-label="Cambiar contraseña">🔑</button>
+                    <button id="btn-export" title="Exportar contactos" aria-label="Exportar contactos">📤</button>
+                    <button id="btn-logout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
+                    <button id="btn-new-chat" title="Nuevo Chat" aria-label="Nuevo Chat">➕</button>
+                </div>
+                <input type="file" id="avatar-input" accept="image/*" style="display: none;">
             </header>
               
             <div class="search-bar">
@@ -55,77 +57,80 @@
             </div>
             
             <div class="chats-title-container">
-              <h2 class="chats-title">Chats</h2>
+                <h2 class="chats-title">Chats</h2>
             </div>
 
             <div class="contacts-list" id="contacts-container">
             </div>
         </div>
 
-       <div id="chat-room-view" class="view">
-    <header class="chat-header">
-       <button id="btn-back" aria-label="Volver">⬅️</button>
-       <img src="img/avatar.webp" alt="Avatar" class="avatar" id="contact-avatar">  
-       <div class="active-user-info">
-            <span id="active-name">ConectaVzla</span>
-            <span class="status-online" id="active-status">En línea</span>
-       </div>
-            <!-- ========== VISTA DE NOVEDADES ========== -->
-    <div id="status-view" class="view">
-        <header class="chat-header">
-            <button id="btn-status-back" aria-label="Volver">⬅️</button>
-            <div class="active-user-info">
-                <span>Novedades</span>
-                <span class="status-online">Últimas 24 horas</span>
+        <!-- ========== SALA DE CHAT ========== -->
+        <div id="chat-room-view" class="view">
+            <header class="chat-header">
+                <button id="btn-back" aria-label="Volver">⬅️</button>
+                <img src="img/avatar.webp" alt="Avatar" class="avatar" id="contact-avatar">  
+                <div class="active-user-info">
+                    <span id="active-name">ConectaVzla</span>
+                    <span class="status-online" id="active-status">En línea</span>
+                </div>
+            </header>
+
+            <!-- Barra superior de audio y video -->
+            <div class="calls-bar">
+                <button id="btn-voice" class="call-btn" title="Grabar nota de voz">
+                    <span class="call-icon">🎤</span>
+                    <span class="call-label">Nota de voz</span>
+                </button>
+                <button id="btn-video-msg" class="call-btn" title="Grabar videomensaje">
+                    <span class="call-icon">📹</span>
+                    <span class="call-label">Videomensaje</span>
+                </button>
             </div>
-        </header>
-        <div class="contacts-list" id="status-list"></div>
-        <input type="file" id="status-image-input" accept="image/*" style="display: none;">
-    </div>
 
-    <!-- ========== VISOR DE NOVEDADES (PANTALLA COMPLETA) ========== -->
-    <div id="status-viewer">
-        <div class="viewer-header">
-            <img id="viewer-avatar" src="img/avatar.webp" alt="Avatar" class="avatar" style="width:38px;height:38px;">
-            <div class="active-user-info">
-                <span id="viewer-name"></span>
-                <span id="viewer-time" class="status-online"></span>
+            <div class="messages-container" id="messages-container">
             </div>
-            <span id="viewer-counter" class="viewer-counter"></span>
-            <button id="viewer-delete" class="viewer-btn" title="Eliminar">🗑️</button>
-            <button id="viewer-close" class="viewer-btn" title="Cerrar">✖</button>
+
+            <footer class="chat-input-bar">
+                <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+                <button id="btn-image" title="Subir imágenes (máx. 2)">📷</button>
+                <button id="btn-send" title="Enviar">➤</button>
+                <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
+            </footer>
         </div>
-        <div class="viewer-body">
-            <button id="viewer-prev" class="viewer-nav" style="left:8px;">‹</button>
-            <img id="viewer-image" src="" alt="Novedad">
-            <p id="viewer-text"></p>
-            <button id="viewer-next" class="viewer-nav" style="right:8px;">›</button>
+
+        <!-- ========== VISTA DE NOVEDADES========== -->
+        <div id="status-view" class="view">
+            <header class="chat-header">
+                <button id="btn-status-back" aria-label="Volver">⬅️</button>
+                <div class="active-user-info">
+                    <span>Novedades</span>
+                    <span class="status-online">Últimas 24 horas</span>
+                </div>
+            </header>
+            <div class="contacts-list" id="status-list"></div>
+            <input type="file" id="status-image-input" accept="image/*" style="display: none;">
         </div>
-    </div>
-    </header>
 
-    <!-- Barra superior de audio y video (como en la imagen) -->
-    <div class="calls-bar">
-        <button id="btn-voice" class="call-btn" title="Grabar nota de voz">
-            <span class="call-icon">🎤</span>
-            <span class="call-label">Nota de voz</span>
-        </button>
-        <button id="btn-video-msg" class="call-btn" title="Grabar videomensaje">
-            <span class="call-icon">📹</span>
-            <span class="call-label">Videomensaje</span>
-        </button>
-    </div>
+        <!-- ========== VISOR DE NOVEDADES (PANTALLA COMPLETA) ========== -->
+        <div id="status-viewer">
+            <div class="viewer-header">
+                <img id="viewer-avatar" src="img/avatar.webp" alt="Avatar" class="avatar" style="width:38px;height:38px;">
+                <div class="active-user-info">
+                    <span id="viewer-name"></span>
+                    <span id="viewer-time" class="status-online"></span>
+                </div>
+                <span id="viewer-counter" class="viewer-counter"></span>
+                <button id="viewer-delete" class="viewer-btn" title="Eliminar">🗑️</button>
+                <button id="viewer-close" class="viewer-btn" title="Cerrar">✖</button>
+            </div>
+            <div class="viewer-body">
+                <button id="viewer-prev" class="viewer-nav" style="left:8px;">‹</button>
+                <img id="viewer-image" src="" alt="Novedad">
+                <p id="viewer-text"></p>
+                <button id="viewer-next" class="viewer-nav" style="right:8px;">›</button>
+            </div>
+        </div>
 
-    <div class="messages-container" id="messages-container">
-    </div>
-
-    <footer class="chat-input-bar">
-        <input type="text" id="message-input" placeholder="Escribe un mensaje...">
-        <button id="btn-image" title="Subir imágenes (máx. 2)">📷</button>
-        <button id="btn-send" title="Enviar">➤</button>
-        <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
-    </footer>
-</div>
     </div>
 
     <script src="app.js"></script>
