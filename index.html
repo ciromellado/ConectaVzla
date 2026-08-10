@@ -41,6 +41,7 @@
               </h1>
                 <div class="header-actions">
                 <img id="my-avatar" src="img/avatar.webp" alt="Mi avatar" class="my-avatar" title="Toca para cambiar tu avatar">
+                <button id="btn-status-tab" title="Novedades" aria-label="Novedades">🌟</button>
                 <button id="btn-change-pass" title="Cambiar contraseña" aria-label="Cambiar contraseña">🔑</button>
                 <button id="btn-export" title="Exportar contactos" aria-label="Exportar contactos">📤</button>
                 <button id="btn-logout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
@@ -69,6 +70,38 @@
             <span id="active-name">ConectaVzla</span>
             <span class="status-online" id="active-status">En línea</span>
        </div>
+            <!-- ========== VISTA DE NOVEDADES ========== -->
+    <div id="status-view" class="view">
+        <header class="chat-header">
+            <button id="btn-status-back" aria-label="Volver">⬅️</button>
+            <div class="active-user-info">
+                <span>Novedades</span>
+                <span class="status-online">Últimas 24 horas</span>
+            </div>
+        </header>
+        <div class="contacts-list" id="status-list"></div>
+        <input type="file" id="status-image-input" accept="image/*" style="display: none;">
+    </div>
+
+    <!-- ========== VISOR DE NOVEDADES (PANTALLA COMPLETA) ========== -->
+    <div id="status-viewer">
+        <div class="viewer-header">
+            <img id="viewer-avatar" src="img/avatar.webp" alt="Avatar" class="avatar" style="width:38px;height:38px;">
+            <div class="active-user-info">
+                <span id="viewer-name"></span>
+                <span id="viewer-time" class="status-online"></span>
+            </div>
+            <span id="viewer-counter" class="viewer-counter"></span>
+            <button id="viewer-delete" class="viewer-btn" title="Eliminar">🗑️</button>
+            <button id="viewer-close" class="viewer-btn" title="Cerrar">✖</button>
+        </div>
+        <div class="viewer-body">
+            <button id="viewer-prev" class="viewer-nav" style="left:8px;">‹</button>
+            <img id="viewer-image" src="" alt="Novedad">
+            <p id="viewer-text"></p>
+            <button id="viewer-next" class="viewer-nav" style="right:8px;">›</button>
+        </div>
+    </div>
     </header>
 
     <!-- Barra superior de audio y video (como en la imagen) -->
