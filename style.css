@@ -792,3 +792,10 @@ html, body {
     cursor: pointer;
     z-index: 5;
 }
+/* Enlaces clicables en mensajes */
+.message a {
+    color: #0277bd;
+    font-weight: 600;
+    text-decoration: underline;
+    word-break: break-all;
+}
