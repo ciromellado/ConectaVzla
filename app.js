@@ -68,6 +68,23 @@ function mostrarErrorLogin(mensaje) {
     if (loginError) loginError.textContent = mensaje;
     if (mensaje !== '') console.error(mensaje);
 }
+// Convierte URLs en enlaces clicables
+function convertirEnlaces(textoEscapado) {
+    const regex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/g;
+    return textoEscapado.replace(regex, function(url) {
+        let limpia = url;
+        let sufijo = '';
+        const puntuacion = limpia.match(/[.,;:!?)\]]+$/);
+        if (puntuacion) {
+            sufijo = puntuacion[0];
+            limpia = limpia.slice(0, -sufijo.length);
+        }
+        const href = limpia.indexOf('www.') === 0 ? 'https://' + limpia : limpia;
+        const hrefSeguro = href.replace(/"/g, '%22');
+        return '<a href="' + hrefSeguro + '" target="_blank" rel="noopener noreferrer">' + limpia + '</a>' + sufijo;
+    });
+}
+
 
 // ==========================================
 // AUTENTICACIÓN
@@ -585,7 +602,8 @@ function renderMessages(messages) {
         let contenidoMensaje = '';
 
         if (msg.message_type === 'text') {
-            contenidoMensaje = '<p>' + escapeHTML(msg.content) + '</p>';
+            contenidoMensaje = '<p>' + convertirEnlaces(escapeHTML(msg.content)) + '</p>';
+        }
         } else if (msg.message_type === 'audio' && msg.file_urls && msg.file_urls.length > 0) {
             contenidoMensaje = '<audio controls src="' + msg.file_urls[0] + '"></audio>';
         } else if (msg.message_type === 'video' && msg.file_urls && msg.file_urls.length > 0) {
