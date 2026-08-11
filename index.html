@@ -115,7 +115,21 @@
             <div class="contacts-list" id="status-list"></div>
             <input type="file" id="status-image-input" accept="image/*" style="display: none;">
         </div>
-
+                <!-- ========== SALA DE GRUPO ========== -->
+        <div id="group-room-view" class="view">
+            <header class="chat-header">
+                <button id="btn-group-back" aria-label="Volver">⬅️</button>
+                <div class="active-user-info">
+                    <span id="group-name">Grupo</span>
+                    <span class="status-online" id="group-members-label"></span>
+                </div>
+            </header>
+            <div class="messages-container" id="group-messages-container"></div>
+            <footer class="chat-input-bar">
+                <input type="text" id="group-message-input" placeholder="Escribe al grupo...">
+                <button id="group-send" title="Enviar">➤</button>
+            </footer>
+        </div>
         <!-- ========== VISOR DE NOVEDADES (PANTALLA COMPLETA) ========== -->
         <div id="status-viewer">
             <div class="viewer-header">
