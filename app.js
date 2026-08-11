@@ -970,7 +970,7 @@ contactsContainer.addEventListener('click', function(e) {
         return;
     }
 
-        const contactItem = e.target.closest('.contact-item');
+    const contactItem = e.target.closest('.contact-item');
     if (contactItem) {
         if (contactItem.dataset.groupId) {
             abrirGrupo(contactItem.dataset.groupId, contactItem.dataset.contactName, contactItem.dataset.adminId);
@@ -978,6 +978,7 @@ contactsContainer.addEventListener('click', function(e) {
             abrirChat(contactItem.dataset.contactName, contactItem.dataset.chatId, contactItem.dataset.otherId);
         }
     }
+});
 messagesContainer.addEventListener('click', function(e) {
     if (e.target.closest('[data-action="delete-msg"]')) {
         const messageDiv = e.target.closest('.message');
