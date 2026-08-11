@@ -32,6 +32,12 @@ const statusView = document.getElementById('status-view');
 const statusListContainer = document.getElementById('status-list');
 const statusViewer = document.getElementById('status-viewer');
 const statusImageInput = document.getElementById('status-image-input');
+const newMenu = document.getElementById('new-menu');
+const groupRoomView = document.getElementById('group-room-view');
+const groupMessagesContainer = document.getElementById('group-messages-container');
+const groupMessageInput = document.getElementById('group-message-input');
+const groupNameEl = document.getElementById('group-name');
+const groupMembersLabel = document.getElementById('group-members-label');
 
 let currentContact = null;
 let currentUser = null;
@@ -51,6 +57,9 @@ let mediaChunks = [];
 let novedadesAgrupadas = [];
 let pendingStatusText = '';
 let visorActual = null;
+let currentGroupId = null;
+let currentGroupAdminId = null;
+let groupSubscription = null;
 
 function escapeHTML(str) {
     if (!str) return '';
@@ -350,7 +359,50 @@ async function cargarContactos() {
                 time: time,
                 avatar: avatarMap[otherId] || 'img/avatar.webp'
             });
-        });
+       
+                });
+
+        // ---------- GRUPOS ----------
+        const groupsResult = await supabaseClient
+            .from('groups')
+            .select('id, name, admin_id, created_at');
+
+        if (!groupsResult.error && groupsResult.data) {
+            for (let gi = 0; gi < groupsResult.data.length; gi++) {
+                const g = groupsResult.data[gi];
+
+                const countR = await supabaseClient
+                    .from('group_members')
+                    .select('username', { count: 'exact', head: true })
+                    .eq('group_id', g.id);
+
+                const lastR = await supabaseClient
+                    .from('group_messages')
+                    .select('content, sender_name, created_at')
+                    .eq('group_id', g.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                let lastMessage = '👥 Grupo creado';
+                let time = formatTime(g.created_at);
+                if (lastR.data && lastR.data.length > 0) {
+                    lastMessage = lastR.data[0].sender_name + ': ' + lastR.data[0].content;
+                    time = formatTime(lastR.data[0].created_at);
+                }
+
+                allContacts.push({
+                    id: g.id,
+                    name: g.name,
+                    otherId: null,
+                    lastMessage: lastMessage,
+                    time: time,
+                    avatar: null,
+                    isGroup: true,
+                    adminId: g.admin_id,
+                    memberCount: countR.count || 0
+                });
+            }
+        }
 
         renderContacts(allContacts);
 
@@ -358,7 +410,6 @@ async function cargarContactos() {
         console.error('Error al cargar contactos:', error);
     }
 }
-
 function renderContacts(contactsList) {
     contactsContainer.innerHTML = '';
 
@@ -372,13 +423,21 @@ function renderContacts(contactsList) {
         contactDiv.classList.add('contact-item');
         contactDiv.dataset.contactName = contact.name;
         contactDiv.dataset.chatId = contact.id;
-        contactDiv.dataset.otherId = contact.otherId;
+        contactDiv.dataset.otherId = contact.otherId || '';
 
-        const imgTag = '<img src="' + contact.avatar + '" alt="Avatar de ' + escapeHTML(contact.name) + '" class="avatar" onerror="this.src=\'img/avatar.webp\'">';
-        const nameSpan = '<span class="contact-name">' + escapeHTML(contact.name) + '</span>';
+        if (contact.isGroup) {
+            contactDiv.dataset.groupId = contact.id;
+            contactDiv.dataset.adminId = contact.adminId;
+        }
+
+        const imgTag = contact.isGroup
+            ? '<div class="avatar group-avatar">👥</div>'
+            : '<img src="' + contact.avatar + '" alt="Avatar de ' + escapeHTML(contact.name) + '" class="avatar" onerror="this.src=\'img/avatar.webp\'">';
+
+        const nameSpan = '<span class="contact-name">' + escapeHTML(contact.name) + (contact.isGroup ? ' 👥' : '') + '</span>';
         const timeSpan = '<span class="message-time">' + escapeHTML(contact.time) + '</span>';
         const lastMsg = '<p class="last-message">' + escapeHTML(contact.lastMessage) + '</p>';
-        const deleteBtn = '<button class="btn-delete-contact" data-action="delete" title="Borrar chat">🗑️</button>';
+        const deleteBtn = contact.isGroup ? '' : '<button class="btn-delete-contact" data-action="delete" title="Borrar chat">🗑️</button>';
 
         const html = '<div class="contact-info">' +
             '<div class="contact-row">' + nameSpan + timeSpan + '</div>' +
@@ -911,12 +970,14 @@ contactsContainer.addEventListener('click', function(e) {
         return;
     }
 
-    const contactItem = e.target.closest('.contact-item');
+        const contactItem = e.target.closest('.contact-item');
     if (contactItem) {
-        abrirChat(contactItem.dataset.contactName, contactItem.dataset.chatId, contactItem.dataset.otherId);
+        if (contactItem.dataset.groupId) {
+            abrirGrupo(contactItem.dataset.groupId, contactItem.dataset.contactName, contactItem.dataset.adminId);
+        } else {
+            abrirChat(contactItem.dataset.contactName, contactItem.dataset.chatId, contactItem.dataset.otherId);
+        }
     }
-});
-
 messagesContainer.addEventListener('click', function(e) {
     if (e.target.closest('[data-action="delete-msg"]')) {
         const messageDiv = e.target.closest('.message');
@@ -968,7 +1029,26 @@ passwordInput.addEventListener('keypress', function(e) {
 document.getElementById('btn-start').addEventListener('click', iniciarSesion);
 document.getElementById('btn-register').addEventListener('click', crearCuenta);
 document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
-document.getElementById('btn-new-chat').addEventListener('click', crearNuevoChat);
+document.getElementById('btn-new-chat').addEventListener('click', function(e) {
+    e.stopPropagation();
+    newMenu.classList.toggle('visible');
+});
+
+document.getElementById('menu-new-contact').addEventListener('click', function() {
+    newMenu.classList.remove('visible');
+    crearNuevoChat();
+});
+
+document.getElementById('menu-new-group').addEventListener('click', function() {
+    newMenu.classList.remove('visible');
+    crearGrupo();
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#new-menu') && !e.target.closest('#btn-new-chat')) {
+        newMenu.classList.remove('visible');
+    }
+});
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 document.getElementById('btn-export').addEventListener('click', exportarContactos);
 document.getElementById('btn-change-pass').addEventListener('click', cambiarContrasena);
@@ -1312,6 +1392,167 @@ async function eliminarNovedadActual() {
     await cargarNovedades();
 }
 
+ // ==========================================
+// GRUPOS
+// ==========================================
+async function crearGrupo() {
+    const nombre = prompt('Nombre del grupo (ej: Familia Mellado):');
+    if (!nombre || !nombre.trim()) return;
+
+    const miembrosTxt = prompt('Escribe los USUARIOS REGISTRADOS a agregar,\nseparados por coma (ej: carmen,kharla):');
+    if (miembrosTxt === null) return;
+
+    const nombres = miembrosTxt.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s !== ''; });
+
+    try {
+        const miembros = [{ id: currentUserId, username: currentUser }];
+
+        for (let i = 0; i < nombres.length; i++) {
+            if (nombres[i].toLowerCase() === currentUser.toLowerCase()) continue;
+            const r = await supabaseClient
+                .from('users')
+                .select('id, username')
+                .ilike('username', nombres[i])
+                .maybeSingle();
+            if (r.error || !r.data) {
+                alert('El usuario "' + nombres[i] + '" no está registrado. Se omitirá.');
+                continue;
+            }
+            miembros.push({ id: r.data.id, username: r.data.username });
+        }
+
+        if (miembros.length < 2) {
+            alert('Un grupo necesita al menos 1 miembro además de ti.');
+            return;
+        }
+
+        const g = await supabaseClient
+            .from('groups')
+            .insert([{ name: nombre.trim(), admin_id: currentUserId, admin_name: currentUser }])
+            .select()
+            .single();
+
+        if (g.error) throw g.error;
+
+        const rows = miembros.map(function(m) {
+            return { group_id: g.data.id, user_id: m.id, username: m.username };
+        });
+        const m = await supabaseClient.from('group_members').insert(rows);
+        if (m.error) throw m.error;
+
+        alert('✅ Grupo "' + nombre.trim() + '" creado con ' + miembros.length + ' miembros.');
+        await cargarContactos();
+
+    } catch (err) {
+        console.error('Error al crear grupo:', err);
+        alert('No se pudo crear el grupo.');
+    }
+}
+
+async function abrirGrupo(groupId, groupName, adminId) {
+    currentGroupId = groupId;
+    currentGroupAdminId = adminId;
+    groupNameEl.textContent = groupName;
+
+    const r = await supabaseClient
+        .from('group_members')
+        .select('username')
+        .eq('group_id', groupId);
+    const nombres = (r.data || []).map(function(m) { return m.username; });
+    groupMembersLabel.textContent = nombres.length + ' miembros';
+
+    chatListView.classList.remove('active');
+    groupRoomView.classList.add('active');
+
+    await cargarMensajesGrupo();
+    suscribirseAGrupo();
+}
+
+function cerrarGrupo() {
+    if (groupSubscription) {
+        groupSubscription.unsubscribe();
+        groupSubscription = null;
+    }
+    groupRoomView.classList.remove('active');
+    chatListView.classList.add('active');
+    currentGroupId = null;
+    cargarContactos();
+}
+
+async function cargarMensajesGrupo() {
+    if (!currentGroupId) return;
+    const result = await supabaseClient
+        .from('group_messages')
+        .select('*')
+        .eq('group_id', currentGroupId)
+        .order('created_at', { ascending: true })
+        .limit(50);
+
+    if (result.error) {
+        console.error(result.error);
+        return;
+    }
+    renderMensajesGrupo(result.data || []);
+}
+
+function renderMensajesGrupo(messages) {
+    groupMessagesContainer.innerHTML = '';
+
+    messages.forEach(function(msg) {
+        const isSent = msg.sender_id === currentUserId;
+        const div = document.createElement('div');
+        div.classList.add('message');
+        div.classList.add(isSent ? 'sent' : 'received');
+
+        const esAdmin = msg.sender_id === currentGroupAdminId;
+        const colorFirma = isSent ? '#075e54' : '#0288D1';
+        const firma = '<div class="msg-signature" style="font-size: 0.75rem; font-weight: bold; color: ' + colorFirma + '; margin-bottom: 2px;">' + escapeHTML(msg.sender_name) + (esAdmin ? ' 👑' : '') + '</div>';
+        const cuerpo = '<p>' + convertirEnlaces(escapeHTML(msg.content)) + '</p>';
+        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTime(msg.created_at) + '</span></div>';
+
+        div.innerHTML = firma + cuerpo + footer;
+        groupMessagesContainer.appendChild(div);
+    });
+
+    groupMessagesContainer.scrollTop = groupMessagesContainer.scrollHeight;
+}
+
+async function enviarMensajeGrupo() {
+    const text = groupMessageInput.value.trim();
+    if (!text || !currentGroupId) return;
+
+    const r = await supabaseClient
+        .from('group_messages')
+        .insert([{
+            group_id: currentGroupId,
+            sender_id: currentUserId,
+            sender_name: currentUser,
+            content: text,
+            message_type: 'text',
+            file_urls: []
+        }]);
+
+    if (r.error) console.error(r.error);
+    groupMessageInput.value = '';
+}
+
+function suscribirseAGrupo() {
+    if (groupSubscription) groupSubscription.unsubscribe();
+
+    groupSubscription = supabaseClient
+        .channel('grupo-' + currentGroupId)
+        .on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'group_messages', filter: 'group_id=eq.' + currentGroupId },
+            function() { cargarMensajesGrupo(); }
+        )
+        .subscribe();
+}
+
+document.getElementById('btn-group-back').addEventListener('click', cerrarGrupo);
+document.getElementById('group-send').addEventListener('click', enviarMensajeGrupo);
+groupMessageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') enviarMensajeGrupo();
+});
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
