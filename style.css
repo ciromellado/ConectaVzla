@@ -799,3 +799,49 @@ html, body {
     text-decoration: underline;
     word-break: break-all;
 }
+/* ========== MENÚ NUEVO (contacto / grupo) ========== */
+.new-menu {
+    display: none;
+    position: absolute;
+    top: 58px;
+    right: 10px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 60;
+    min-width: 180px;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.new-menu.visible {
+    display: flex;
+}
+
+.new-menu button {
+    background: none;
+    border: none;
+    padding: 14px 18px;
+    text-align: left;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    color: #111;
+}
+
+.new-menu button:last-child {
+    border-bottom: none;
+}
+
+.new-menu button:active {
+    background: #f0f0f0;
+}
+
+/* Avatar de grupo */
+.group-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    background: #e0f2fe;
+}
