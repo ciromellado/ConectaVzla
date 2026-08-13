@@ -73,6 +73,14 @@ function formatTime(timestamp) {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+function formatTimeHoy(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const ahora = new Date();
+    const esHoy = date.toDateString() === ahora.toDateString();
+    const hora = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return esHoy ? 'Hoy ' + hora : hora;
+}
 
 function mostrarErrorLogin(mensaje) {
     if (loginError) loginError.textContent = mensaje;
@@ -677,7 +685,7 @@ function renderMessages(messages) {
         }
 
         const firma = '<div class="msg-signature" style="font-size: 0.75rem; font-weight: bold; color: #0288D1; margin-bottom: 2px;">' + escapeHTML(msg.sender_name) + '</div>';
-        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTime(msg.created_at) + '</span>' + checks + '<button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button></div>';
+        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTimeHoy(msg.created_at) + '</span>' + checks + '<button class="btn-delete" data-action="delete-msg" title="Borrar mensaje">×</button></div>';
 
         messageDiv.innerHTML = firma + contenidoMensaje + footer;
         messagesContainer.appendChild(messageDiv);
@@ -1509,7 +1517,7 @@ function renderMensajesGrupo(messages) {
         const colorFirma = isSent ? '#075e54' : '#0288D1';
         const firma = '<div class="msg-signature" style="font-size: 0.75rem; font-weight: bold; color: ' + colorFirma + '; margin-bottom: 2px;">' + escapeHTML(msg.sender_name) + (esAdmin ? ' 👑' : '') + '</div>';
         const cuerpo = '<p>' + convertirEnlaces(escapeHTML(msg.content)) + '</p>';
-        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTime(msg.created_at) + '</span></div>';
+        const footer = '<div class="msg-footer"><span class="msg-time">' + formatTimeHoy(msg.created_at) + '</span></div>';
 
         div.innerHTML = firma + cuerpo + footer;
         groupMessagesContainer.appendChild(div);
