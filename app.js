@@ -725,8 +725,7 @@ function suscribirseAMensajes() {
                             mostrarNotificacion('ConectaVzla 💬', payload.new.sender_name + ': ' + (payload.new.content || '📷 Multimedia'));
                         }
                     }
-                }
-                 
+                }    
             else if (payload.eventType === 'UPDATE') {
                     cargarMensajes();
                 } else if (payload.eventType === 'DELETE') {
