@@ -213,9 +213,10 @@ async function prepararSesion(authUser) {
     mostrarErrorLogin('');
     loginView.classList.remove('active');
     chatListView.classList.add('active');
-    await cargarContactos();
+       await cargarContactos();
+    pedirPermisoNotificaciones();
 }
-
+    
 async function cerrarSesion() {
     if (messageSubscription) {
         messageSubscription.unsubscribe();
@@ -712,15 +713,21 @@ function suscribirseAMensajes() {
                 filter: filterStr
             },
             function(payload) {
-                if (payload.eventType === 'INSERT') {
+                    if (payload.eventType === 'INSERT') {
                     cargarMensajes();
                     if (payload.new.sender_name !== currentUser) {
                         const notifSound = document.getElementById('notification-sound');
                         if (notifSound) {
                             notifSound.play().catch(function() {});
                         }
+                        const viendoEseChat = chatRoomView.classList.contains('active') && currentContact === payload.new.sender_name;
+                        if (!viendoEseChat) {
+                            mostrarNotificacion('ConectaVzla 💬', payload.new.sender_name + ': ' + (payload.new.content || '📷 Multimedia'));
+                        }
                     }
-                } else if (payload.eventType === 'UPDATE') {
+                }
+                } 
+            else if (payload.eventType === 'UPDATE') {
                     cargarMensajes();
                 } else if (payload.eventType === 'DELETE') {
                     cargarMensajes();
@@ -1552,7 +1559,14 @@ function suscribirseAGrupo() {
         .channel('grupo-' + currentGroupId)
         .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'group_messages', filter: 'group_id=eq.' + currentGroupId },
-            function() { cargarMensajesGrupo(); }
+            function(payload) {
+                cargarMensajesGrupo();
+                if (payload.new && payload.new.sender_name !== currentUser) {
+                    if (!groupRoomView.classList.contains('active')) {
+                        mostrarNotificacion('ConectaVzla 👥', payload.new.sender_name + ' en ' + groupNameEl.textContent + ': ' + (payload.new.content || '📷 Multimedia'));
+                    }
+                }
+            }
         )
         .subscribe();
 }
@@ -1562,6 +1576,27 @@ document.getElementById('group-send').addEventListener('click', enviarMensajeGru
 groupMessageInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') enviarMensajeGrupo();
 });
+// ==========================================
+// NOTIFICACIONES DEL SISTEMA
+// ==========================================
+function pedirPermisoNotificaciones() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(function() {});
+    }
+}
+
+function mostrarNotificacion(titulo, cuerpo) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(titulo, {
+                body: cuerpo,
+                icon: 'img/logo.webp',
+                badge: 'img/logo.webp'
+            });
+        }).catch(function() {});
+    }
+}
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
