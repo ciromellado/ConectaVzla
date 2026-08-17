@@ -213,7 +213,7 @@ async function prepararSesion(authUser) {
     mostrarErrorLogin('');
     loginView.classList.remove('active');
     chatListView.classList.add('active');
-       await cargarContactos();
+    await cargarContactos();
     pedirPermisoNotificaciones();
 }
     
