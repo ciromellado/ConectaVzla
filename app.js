@@ -726,7 +726,7 @@ function suscribirseAMensajes() {
                         }
                     }
                 }
-                } 
+                 
             else if (payload.eventType === 'UPDATE') {
                     cargarMensajes();
                 } else if (payload.eventType === 'DELETE') {
