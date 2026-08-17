@@ -112,6 +112,7 @@ function emailDesdeUsuario(username) {
 }
 
 async function iniciarSesion() {
+    pedirPermisoNotificaciones();
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
 
@@ -137,8 +138,8 @@ async function iniciarSesion() {
         mostrarErrorLogin('Error de conexión. Intenta de nuevo.');
     }
 }
-
 async function crearCuenta() {
+    pedirPermisoNotificaciones();
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
 
@@ -213,10 +214,8 @@ async function prepararSesion(authUser) {
     mostrarErrorLogin('');
     loginView.classList.remove('active');
     chatListView.classList.add('active');
-    await cargarContactos();
-    pedirPermisoNotificaciones();
-}
-    
+       await cargarContactos();
+}   
 async function cerrarSesion() {
     if (messageSubscription) {
         messageSubscription.unsubscribe();
@@ -1063,6 +1062,11 @@ document.addEventListener('click', function(e) {
     if (!e.target.closest('#new-menu') && !e.target.closest('#btn-new-chat')) {
         newMenu.classList.remove('visible');
     }
+});
+// Pedir permiso de notificaciones con el primer clic (sesiones automáticas)
+document.addEventListener('click', function pedirPermisoUnaVez() {
+    pedirPermisoNotificaciones();
+    document.removeEventListener('click', pedirPermisoUnaVez);
 });
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 document.getElementById('btn-export').addEventListener('click', exportarContactos);
