@@ -1068,6 +1068,19 @@ document.addEventListener('click', function pedirPermisoUnaVez() {
     pedirPermisoNotificaciones();
     document.removeEventListener('click', pedirPermisoUnaVez);
 });
+// Desbloquear el sonido con el primer clic (política de autoplay)
+document.addEventListener('click', function desbloquearAudio() {
+    const s = document.getElementById('notification-sound');
+    if (s) {
+        s.muted = true;
+        s.play().then(function() {
+            s.pause();
+            s.currentTime = 0;
+            s.muted = false;
+        }).catch(function() {});
+    }
+    document.removeEventListener('click', desbloquearAudio);
+});
 document.getElementById('btn-back').addEventListener('click', cerrarChat);
 document.getElementById('btn-export').addEventListener('click', exportarContactos);
 document.getElementById('btn-change-pass').addEventListener('click', cambiarContrasena);
