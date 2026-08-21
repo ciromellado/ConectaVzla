@@ -853,11 +853,11 @@ html, body {
     height: 40px;
     border-radius: 10px;
 }
-.message {
-    min-width: 0;
-    overflow: hidden;
-}
-
-.messages-container {
-    overflow-x: hidden;
+/* ========== FIX: scroll vertical garantizado en los chats ========== */
+#messages-container,
+.messages-container,
+#group-messages-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
 }
