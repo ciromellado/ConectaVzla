@@ -845,3 +845,20 @@ html, body {
     font-size: 1.6rem;
     background: #e0f2fe;
 }
+/* ========== FIX: REPRODUCTORES DENTRO DE BURBUJAS ========== */
+.message audio,
+.message video {
+    display: block;
+    width: 230px;
+    max-width: 100%;
+    border-radius: 10px;
+}
+
+.message {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.messages-container {
+    overflow-x: hidden;
+}
