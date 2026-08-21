@@ -148,13 +148,14 @@
                 <button id="viewer-next" class="viewer-nav" style="right:8px;">›</button>
             </div>
         </div>
+    </div>
 <!-- 🎥 Vista previa del videomensaje -->
     <div id="video-preview-overlay" class="video-preview-overlay oculto">
       <video id="video-preview" autoplay muted playsinline></video>
     <div class="video-preview-label">🔴 Grabando</div>
 </div>
+    <audio id="notification-sound" src="sonidos/notification.mp3" preload="auto"></audio> 
     <script src="app.js"></script>
-    <audio id="notification-sound" src="sonidos/notification.mp3" preload="auto"></audio>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
