@@ -887,6 +887,9 @@ document.getElementById('btn-voice').addEventListener('click', async function() 
 document.getElementById('btn-video-msg').addEventListener('click', async function() {
     if (!currentChatId) return;
 
+    const preview = document.getElementById('video-preview');
+    const overlay = document.getElementById('video-preview-overlay');
+
     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -901,9 +904,12 @@ document.getElementById('btn-video-msg').addEventListener('click', async functio
                 await subirVideo(blob);
             };
 
+            // 🎥 Mostrar vista previa en vivo
+            preview.srcObject = stream;
+            overlay.classList.remove('oculto');
+
             mediaRecorder.start();
             document.getElementById('btn-video-msg').style.backgroundColor = '#e53e3e';
-            alert('Grabando videomensaje... Haz clic de nuevo para detener y enviar.');
         } catch (err) {
             console.error('Error al acceder a la cámara:', err);
         }
@@ -911,9 +917,12 @@ document.getElementById('btn-video-msg').addEventListener('click', async functio
         mediaRecorder.stop();
         document.getElementById('btn-video-msg').style.backgroundColor = '';
         mediaRecorder.stream.getTracks().forEach(function(t) { t.stop(); });
+
+        // 🎥 Ocultar vista previa
+        preview.srcObject = null;
+        overlay.classList.add('oculto');
     }
 });
-
 document.getElementById('btn-image').addEventListener('click', function() {
     if (!currentChatId) {
         alert('Primero abre un chat.');
