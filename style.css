@@ -853,15 +853,6 @@ html, body {
     height: 40px;
     border-radius: 10px;
 }
-
-/* ========== VIDEO: contenido visual ========== */
-.message video {
-    display: block;
-    width: 100%;
-    max-width: 260px;
-    height: auto;
-    border-radius: 10px;
-}
 .message {
     min-width: 0;
     overflow: hidden;
