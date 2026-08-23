@@ -617,7 +617,7 @@ async function abrirChat(contactName, chatId, otherId) {
 
 function cerrarChat() {
     if (messageSubscription) {
-        messageSubscription.unsubscribe();
+        supabaseClient.removeChannel(messageSubscription);
         messageSubscription = null;
     }
     salirPresencia();
@@ -704,7 +704,8 @@ function renderMessages(messages) {
 
 function suscribirseAMensajes() {
     if (messageSubscription) {
-        messageSubscription.unsubscribe();
+        supabaseClient.removeChannel(messageSubscription);
+        messageSubscription = null;
     }
 
     const channelName = 'mensajes-' + currentChatId;
@@ -742,8 +743,10 @@ function suscribirseAMensajes() {
                     cargarMensajes();
                 }
             }
-        )
-        .subscribe();
+               )
+        .subscribe(function(status) {
+            console.log('📡 Canal mensajes:', status);
+        });
 }
 // ==========================================
 // ENVIAR MENSAJES
@@ -1521,7 +1524,7 @@ async function abrirGrupo(groupId, groupName, adminId) {
 
 function cerrarGrupo() {
     if (groupSubscription) {
-        groupSubscription.unsubscribe();
+        supabaseClient.removeChannel(groupSubscription);
         groupSubscription = null;
     }
     groupRoomView.classList.remove('active');
@@ -1588,8 +1591,10 @@ async function enviarMensajeGrupo() {
 }
 
 function suscribirseAGrupo() {
-    if (groupSubscription) groupSubscription.unsubscribe();
-
+    if (groupSubscription) {
+        supabaseClient.removeChannel(groupSubscription);
+        groupSubscription = null;
+    }
     groupSubscription = supabaseClient
         .channel('grupo-' + currentGroupId)
         .on('postgres_changes',
