@@ -377,7 +377,7 @@ async function cargarContactos() {
                 avatar: avatarMap[otherId] || 'img/avatar.webp',
                 unread: unread
             });
-
+        });
         // ---------- GRUPOS ----------
         const groupsResult = await supabaseClient
             .from('groups')
