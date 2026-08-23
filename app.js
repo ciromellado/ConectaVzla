@@ -457,15 +457,14 @@ function renderContacts(contactsList) {
         const deleteBtn = contact.isGroup ? '' : '<button class="btn-delete-contact" data-action="delete" title="Borrar chat">🗑️</button>';
 
         const html = '<div class="contact-info">' +
+            '<div class="contact-row">' + nameSpan + timeSpan + '</div>' +
             '<div class="contact-row">' + lastMsg + badge + '</div>' +
-            '<div class="contact-row">' + lastMsg + '</div>' +
             '</div>';
 
         contactDiv.innerHTML = imgTag + html + deleteBtn;
         contactsContainer.appendChild(contactDiv);
     });
 }
-
 async function crearNuevoChat() {
     const newContactName = prompt('Ingresa el nombre de USUARIO REGISTRADO de tu contacto:');
 
