@@ -720,7 +720,8 @@ function suscribirseAMensajes() {
                 table: 'messages',
                 filter: filterStr
             },
-            function(payload) {
+                function(payload) {
+                console.log('📩 Evento recibido:', payload.eventType);
                 if (payload.eventType === 'INSERT') {
                     cargarMensajes();
                     if (payload.new.sender_name !== currentUser) {
