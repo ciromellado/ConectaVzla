@@ -720,12 +720,15 @@ function suscribirseAMensajes() {
                 filter: filterStr
             },
             function(payload) {
-                    if (payload.eventType === 'INSERT') {
+                if (payload.eventType === 'INSERT') {
                     cargarMensajes();
                     if (payload.new.sender_name !== currentUser) {
                         const notifSound = document.getElementById('notification-sound');
                         if (notifSound) {
-                            notifSound.play().catch(function() {});
+                            notifSound.volume = 1.0;
+                            notifSound.play().catch(function(err) {
+                                console.warn('Sonido bloqueado por el navegador:', err);
+                            });
                         }
                         const viendoEseChat = chatRoomView.classList.contains('active') && currentContact === payload.new.sender_name;
                         if (!viendoEseChat) {
@@ -733,8 +736,7 @@ function suscribirseAMensajes() {
                             cargarContactos();
                         }
                     }
-                }    
-            else if (payload.eventType === 'UPDATE') {
+                } else if (payload.eventType === 'UPDATE') {
                     cargarMensajes();
                 } else if (payload.eventType === 'DELETE') {
                     cargarMensajes();
@@ -743,7 +745,6 @@ function suscribirseAMensajes() {
         )
         .subscribe();
 }
-
 // ==========================================
 // ENVIAR MENSAJES
 // ==========================================
