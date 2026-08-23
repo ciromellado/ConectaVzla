@@ -315,7 +315,7 @@ async function cargarContactos() {
     try {
         const result = await supabaseClient
             .from('chats')
-            .select('*, messages(content, message_type, created_at)')
+            .select('*, messages(content, message_type, created_at, sender_name, read_at)')
             .or('user_a_id.eq.' + currentUserId + ',user_b_id.eq.' + currentUserId)
             .order('created_at', { ascending: false });
 
@@ -359,16 +359,24 @@ async function cargarContactos() {
                 time = formatTime(lastMsg.created_at);
             }
 
+            let unread = 0;
+            if (chat.messages) {
+                chat.messages.forEach(function(m) {
+                    if (m.sender_name !== currentUser && !m.read_at) {
+                        unread++;
+                    }
+                });
+            }
+
             allContacts.push({
                 id: chat.id,
                 name: otherName,
                 otherId: otherId,
                 lastMessage: lastMessage,
                 time: time,
-                avatar: avatarMap[otherId] || 'img/avatar.webp'
+                avatar: avatarMap[otherId] || 'img/avatar.webp',
+                unread: unread
             });
-       
-                });
 
         // ---------- GRUPOS ----------
         const groupsResult = await supabaseClient
@@ -445,10 +453,11 @@ function renderContacts(contactsList) {
         const nameSpan = '<span class="contact-name">' + escapeHTML(contact.name) + (contact.isGroup ? ' 👥' : '') + '</span>';
         const timeSpan = '<span class="message-time">' + escapeHTML(contact.time) + '</span>';
         const lastMsg = '<p class="last-message">' + escapeHTML(contact.lastMessage) + '</p>';
+        const badge = (contact.unread && contact.unread > 0) ? '<span class="unread-badge">' + contact.unread + '</span>' : '';
         const deleteBtn = contact.isGroup ? '' : '<button class="btn-delete-contact" data-action="delete" title="Borrar chat">🗑️</button>';
 
         const html = '<div class="contact-info">' +
-            '<div class="contact-row">' + nameSpan + timeSpan + '</div>' +
+            '<div class="contact-row">' + lastMsg + badge + '</div>' +
             '<div class="contact-row">' + lastMsg + '</div>' +
             '</div>';
 
@@ -722,6 +731,7 @@ function suscribirseAMensajes() {
                         const viendoEseChat = chatRoomView.classList.contains('active') && currentContact === payload.new.sender_name;
                         if (!viendoEseChat) {
                             mostrarNotificacion('ConectaVzla 💬', payload.new.sender_name + ': ' + (payload.new.content || '📷 Multimedia'));
+                            cargarContactos();
                         }
                     }
                 }    
