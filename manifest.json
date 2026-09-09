@@ -3,8 +3,9 @@
   "short_name": "ConectaVzla",
   "description": "Aplicación de mensajería instantánea para comunicarte de forma rápida y segura.",
   "lang": "es",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
+  "id": "./?source=pwa",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#075e54",
@@ -20,7 +21,13 @@
       "src": "img/android-chrome-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "img/android-chrome-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
