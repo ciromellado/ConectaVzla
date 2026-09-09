@@ -1,32 +1,51 @@
-{
-  "name": "ConectaVzla",
-  "short_name": "ConectaVzla",
-  "description": "Aplicación de mensajería instantánea para comunicarte de forma rápida y segura.",
-  "lang": "es",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#075e54",
-  "theme_color": "#075e54",
-  "icons": [
-    {
-      "src": "img/android-chrome-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "img/android-chrome-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "img/android-chrome-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ]
-}
+const CACHE_NAME = 'conectavzla-v51';
+const CORE_ASSETS = [
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  './img/logo.webp',
+  './img/avatar.webp',
+  './img/android-chrome-192.png',
+  './img/android-chrome-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(CORE_ASSETS);
+    })
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  // Ignorar Supabase y peticiones que no sean GET
+  if (event.request.url.includes('supabase.co') || event.request.method !== 'GET') {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      // Si está en caché, devuélvelo. Si no, búscalo en la red.
+      return response || fetch(event.request).catch(() => {
+        // Si no hay internet y no está en caché, devolver el index.html como fallback
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
+    })
+  );
+});
