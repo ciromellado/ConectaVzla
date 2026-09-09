@@ -1,15 +1,16 @@
-const CACHE_NAME = 'conectavzla-v42';
+const CACHE_NAME = 'conectavzla-v43'; // Versión actualizada
 const CORE_ASSETS = [
-  './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
   './img/logo.webp',
-  './img/avatar.webp'
+  './img/avatar.webp',
+  './img/android-chrome-192.png',
+  './img/android-chrome-512.png'
 ];
 
-// Instalación: guardar los archivos base
+// 1. Instalación: guardar archivos base
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
@@ -17,61 +18,79 @@ self.addEventListener('install', (event) => {
         try {
           await cache.add(asset);
         } catch (e) {
-          console.warn('No se pudo cachear:', asset);
-        }
+          console.warn('No se pudo cachear (ignorado):', asset, e);
+ a       }
       }
     })
   );
-  self.skipWaiting();
+  self.skipWaiting(); // Fuerza la activación inmediata
 });
 
-// Activación: limpiar cachés viejas
+// 2. Activación: limpiar cachés viejas
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       )
-    )
+    ).then(() => {
+      return self.clients.claim(); // Toma el control de todas las pestanas/app inmediatamente
+    })
   );
-  self.clients.claim();
 });
 
-// Estrategia de carga
+// 3. Estrategia de carga (Blindada para Android 8)
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // NUNCA interceptar Supabase (los datos deben ser siempre en vivo)
-  if (url.hostname.endsWith('supabase.co')) return;
-  if (request.method !== 'GET') return;
+  // Ignorar peticiones que no son GET o son de Supabase (datos deben ser en vivo)
+  if (request.method !== 'GET' || url.hostname.includes('supabase.co')) {
+    return;
+  }
 
-  // Navegación: red primero, caché como respaldo (funciona sin internet)
-  if (request.mode === 'navigate') {
+  // A) NAVEGACIÓN (Cuando el usuario abre la app o recarga)
+  if (request.mode === 'navigate' || (request.method === 'GET' && request.headers.get('accept').includes('text/html'))) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', clone));
+          // Si hay internet, guardamos una copia fresca en caché
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', clone));
+          }
           return response;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => {
+          // Si NO hay internet o falla la red, servimos el index.html desde caché
+          return caches.match('./index.html');
+        })
     );
     return;
   }
 
-  // Archivos locales: caché primero con actualización en segundo plano
+  // B) ARCHIVOS LOCALES (CSS, JS, Imágenes)
   if (url.origin === location.origin) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const network = fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        }).catch(() => cached);
-        return cached || network;
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          // Estrategia "Cache First": devolvemos lo que hay en caché inmediatamente (¡ultra rápido!)
+          // Y actualizamos la caché en segundo plano para la próxima vez
+          fetch(request).then((networkResponse) => {
+            if (networkResponse && networkResponse.ok) {
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse.clone()));
+            }
+          }).catch(() => {}); // Ignoramos errores de red en segundo plano
+          
+          return cachedResponse;
+        }
+        
+        // Si no está en caché, intentamos traerlo de la red
+        return fetch(request).catch(() => {
+          // Si falla la red y no está en caché, devolvemos una respuesta vacía segura 
+          // en lugar de 'undefined' (que es lo que rompía tu app en Android 8)
+          return new Response('', { status: 404, statusText: 'No encontrado' });
+        });
       })
     );
   }
