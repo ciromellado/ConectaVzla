@@ -1,44 +1,37 @@
-const CACHE_NAME = 'conectavzla-v44';
-const CORE_ASSETS = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  './img/logo.webp',
-  './img/avatar.webp',
-  './img/android-chrome-192.png',
-  './img/android-chrome-512.png'
-];
+const CACHE_NAME = 'conectavzla-v5';
+const CORE_ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.json', './img/logo.webp', './img/avatar.webp', './img/android-chrome-192.png', './img/android-chrome-512.png'];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(CORE_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', function(event) {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then(function(keys) {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter(function(key) {
+          return key !== CACHE_NAME;
+        }).map(function(key) {
+          return caches.delete(key);
+        })
       );
     })
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', function(event) {
   if (event.request.url.includes('supabase.co') || event.request.method !== 'GET') {
     return;
   }
-
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
+    caches.match(event.request).then(function(response) {
+      return response || fetch(event.request).catch(function() {
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
